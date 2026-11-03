@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PinchPulse — Pinch to count heartbeats on Apple Watch</title>
+<meta name="description" content="PinchPulse turns your Apple Watch into a hands-free beat counter: pinch once per heartbeat while you listen, and get the rate instantly.">
+<meta property="og:title" content="PinchPulse">
+<meta property="og:description" content="PinchPulse turns your Apple Watch into a hands-free beat counter: pinch once per heartbeat while you listen, and get the rate instantly.">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Nunito:wght@700;800;900&amp;family=Noto+Sans+Thai:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#141416}a:hover{color:#C81E47}
+.pp-sprite{background-image:url(/assets/6170013f37f7b2e37d45440180f5b7ac);background-size:300% 500%;background-repeat:no-repeat}
+.rv{opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+.rv.on{opacity:1;transform:none}
+.rx{opacity:0;transform:translateX(-36px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+.rx.on{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){.rv,.rx{transition:none;opacity:1;transform:none}}
+.pp-scroll{animation:pp-scroll 0.625s linear infinite}
+@keyframes pp-scroll{from{transform:translateX(0)}to{transform:translateX(-250px)}}
+.pp-shake{animation:pp-shake 0.625s linear infinite}
+@keyframes pp-shake{0%{transform:translate3d(0,0,0)}2%{transform:translate3d(-1.6px,0,0)}4.5%{transform:translate3d(1.4px,0,0)}7%{transform:translate3d(-1px,0,0)}9.5%{transform:translate3d(0.6px,0,0)}12%{transform:translate3d(-0.25px,0,0)}14%,100%{transform:translate3d(0,0,0)}}
+.pp-shakew{animation:pp-shakew 0.625s linear infinite;transform-origin:961px 547px}
+@keyframes pp-shakew{0%{transform:translate3d(0,0,0) rotate(0)}2%{transform:translate3d(calc(var(--sa) * -1),calc(var(--sa) * 0.35),0) rotate(calc(var(--sr) * -1))}4.5%{transform:translate3d(calc(var(--sa) * 0.9),calc(var(--sa) * -0.3),0) rotate(calc(var(--sr) * 0.85))}7%{transform:translate3d(calc(var(--sa) * -0.6),0,0) rotate(calc(var(--sr) * -0.5))}9.5%{transform:translate3d(calc(var(--sa) * 0.35),0,0) rotate(calc(var(--sr) * 0.25))}12%{transform:translate3d(calc(var(--sa) * -0.15),0,0) rotate(0)}15%,100%{transform:translate3d(0,0,0) rotate(0)}}
+.pp-tick{animation:pp-tick 0.625s cubic-bezier(.2,.7,.2,1) infinite}
+.pp-tick-l{--dx:-6px}.pp-tick-r{--dx:6px}
+@keyframes pp-tick{0%{opacity:0;transform:translateX(0)}4%{opacity:1;transform:translateX(0)}30%{opacity:0;transform:translateX(var(--dx))}100%{opacity:0;transform:translateX(var(--dx))}}
+.pp-floor{animation:pp-floor 0.625s ease-out infinite}
+@keyframes pp-floor{0%{transform:scaleX(0.94);opacity:0.55}25%,100%{transform:scaleX(1);opacity:0.38}}
+.pp-ring{transform-box:fill-box;transform-origin:center;animation:pp-ring 0.625s ease-out infinite}
+.pp-ring2{animation-delay:0.06s}
+@keyframes pp-ring{0%{opacity:0.85;transform:scale(0.94)}45%{opacity:0;transform:scale(1.08)}100%{opacity:0;transform:scale(1.08)}}
+.pp-glow{transform-box:fill-box;transform-origin:center;animation:pp-glow 0.625s ease-out infinite}
+@keyframes pp-glow{0%{opacity:0.45;transform:scale(1)}40%{opacity:0;transform:scale(2.2)}100%{opacity:0;transform:scale(2.2)}}
+.pp-beat{animation:pp-beat 0.625s ease-out infinite}
+@keyframes pp-beat{0%{transform:scale(1.18)}30%,100%{transform:scale(1)}}
+.pp-th h1,.pp-th h2,.pp-th h3{letter-spacing:0 !important;line-height:1.22 !important}
+.pp-th .pp-tight{letter-spacing:0 !important}
+.pp-rip{animation:pp-rip .7s cubic-bezier(.2,.7,.2,1) both}
+@keyframes pp-rip{0%{opacity:.55;transform:translate(-50%,-50%) scale(.2)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.9)}}
+.pp-rip2{animation:pp-rip2 .7s cubic-bezier(.2,.7,.2,1) both}
+@keyframes pp-rip2{0%{opacity:.55;transform:translate(-50%,-50%) scale(.2)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.9)}}
+.pp-press{transition:transform .12s ease}
+.pp-pop{animation:pp-pop .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes pp-pop{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.pp-pop{animation:none}}
+@media (prefers-reduced-motion: reduce){.pp-scroll,.pp-shake,.pp-shakew,.pp-ring,.pp-glow,.pp-beat,.pp-tick,.pp-floor{animation:none}.pp-tick{opacity:0}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<template id="tpl-WatchUI"><div style="position: relative; width: 416px; height: 496px; overflow: hidden; background: #000000; font-family: ui-rounded, 'SF Pro Rounded', 'SF Compact Rounded', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Nunito', system-ui, sans-serif; color: #FFFFFF; -webkit-font-smoothing: antialiased">
+<sc-if value="{{isMain}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 0; top: 0; width: 416px; height: 496px">
+
+<div style="position: absolute; left: 28px; top: 32px; width: 80px; height: 74px; border-radius: 37px; background: #1F1F21; box-shadow: inset 0 0 0 1px #2C2C2E; display: flex; align-items: center; justify-content: center; gap: 8px">
+<img src="/assets/74eb62b50a7f629db778bd76c2cdbe38" alt="" style="width: 36px; height: 31px; object-fit: contain; display: block">
+<svg width="9" height="15" viewBox="0 0 9 15" fill="none" aria-hidden="true"><path d="M1.8 1.8L7 7.5L1.8 13.2" stroke="#8A8A8E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div style="position: absolute; right: 28px; top: 34px; font-size: 32px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums">{{time}}</div>
+
+<sc-if value="{{isIdle}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; right: 22px; top: 100px; width: 42px; box-sizing: border-box; padding: 10px 0; border-radius: 21px; background: #1C1C1F; display: flex; flex-direction: column; align-items: center; gap: 10px">
+<img src="/assets/a023e7b0eb129d13d03d0fc6698f8cc0" alt="" style="width: 28px; height: 25px; display: block">
+<img src="/assets/c16ea0bb12c5fc9faf4205a8d7939f54" alt="" style="width: 24px; height: 25px; display: block; opacity: 0.6">
+</div>
+</sc-if>
+
+<div style="position: absolute; left: 22px; top: 136px; height: 136px; display: flex; align-items: flex-end; gap: 8px">
+<sc-if value="{{hasValue}}" hint-placeholder-val="{{ true }}">
+<div style="font-size: 122px; font-weight: 800; line-height: 0.86; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; padding-bottom: 2px">{{value}}</div>
+</sc-if>
+<sc-if value="{{noValue}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; gap: 6px; padding: 0 10px 38px 0">
+<div style="width: 38px; height: 16px; border-radius: 2px; background: #5C5C60"></div>
+<div style="width: 38px; height: 16px; border-radius: 2px; background: #5C5C60"></div>
+</div>
+</sc-if>
+<div style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding-bottom: 6px">
+<img src="/assets/773846be9f32c64a1cddf5a673c221c8" alt="" style="width: 30px; height: 27px; display: block; margin-left: 2px">
+<div style="font-size: 23px; font-weight: 700; line-height: 0.8; color: #8A8A8E">bpm</div>
+</div>
+</div>
+
+<div style="position: absolute; left: 28px; top: 268px; height: 30px; font-size: 28px; font-weight: 800; line-height: 1; color: {{statusColor}}">{{statusLabel}}</div>
+
+<div style="position: absolute; left: 18px; right: 18px; top: 316px; height: 24px; display: flex; align-items: center; gap: 14px">
+<div style="font-size: 19px; font-weight: 700; color: #8A8A8E; line-height: 1; min-width: 22px">60</div>
+<div style="position: relative; flex-grow: 1; height: 5px; border-radius: 3px; background: #2A292E">
+<div style="position: absolute; top: 0; bottom: 0; left: 36%; width: 28%; border-radius: 3px; background: linear-gradient(90deg, rgba(62,154,108,0.25), #3E9A6C 30%, #3E9A6C 70%, rgba(62,154,108,0.25))"></div>
+<sc-if value="{{hasValue}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; top: -9px; left: {{markerLeft}}; width: 8px; height: 23px; margin-left: -4px; border-radius: 4px; background: {{statusColor}}"></div>
+</sc-if>
+</div>
+<div style="font-size: 19px; font-weight: 700; color: #8A8A8E; line-height: 1">140</div>
+</div>
+
+<div style="position: absolute; left: 0; right: 0; top: 362px; height: 40px; display: flex; align-items: center; justify-content: center">
+<sc-if value="{{isLive}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center">
+<div style="display: flex; align-items: baseline; gap: 7px; padding-right: 40px">
+<span style="font-size: 26px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums">{{count}}</span>
+<span style="font-size: 22px; font-weight: 700; line-height: 1; color: #8A8A8E">beats</span>
+</div>
+<div style="width: 2px; height: 20px; border-radius: 1px; background: #38383B"></div>
+<div style="display: flex; align-items: center; gap: 9px; padding-left: 40px">
+<span style="width: 10px; height: 10px; border-radius: 5px; background: #FF3B5E; display: block"></span>
+<span style="font-size: 22px; font-weight: 700; line-height: 1; color: #A1A1A6">{{activity}}</span>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{isIdle}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 12px">
+<img src="/assets/9dfbf25b0eb71d721f1293b4e656b5c2" alt="" style="width: 28px; height: 25px; display: block">
+<span style="font-size: 24px; font-weight: 800; line-height: 1; color: #D1D1D6">Pinch to start</span>
+</div>
+</sc-if>
+</div>
+
+<div style="position: absolute; left: 166px; top: 416px; width: 82px; height: 32px; border-radius: 16px; background: #1F1F21; display: flex; align-items: center; justify-content: center; gap: 13px">
+<img src="/assets/773846be9f32c64a1cddf5a673c221c8" alt="" style="width: 20px; height: 17px; display: block">
+<img src="/assets/8fa7412d63e8eb769da00f0c057066bd" alt="" style="width: 21px; height: 18px; display: block; opacity: 0.5">
+</div>
+</div>
+</sc-if>
+<sc-if value="{{isList}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 0; top: 0; width: 416px; height: 496px">
+<div style="position: absolute; left: 28px; top: 32px; width: 74px; height: 74px; border-radius: 37px; background: #1F1F21; box-shadow: inset 0 0 0 1px #2C2C2E; display: flex; align-items: center; justify-content: center">
+<svg width="16" height="26" viewBox="0 0 16 26" fill="none" aria-hidden="true"><path d="M13 3L3 13L13 23" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div style="position: absolute; right: 26px; top: 34px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px">
+<span style="font-size: 32px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums">{{time}}</span>
+<span style="font-size: 30px; font-weight: 800; line-height: 1; color: #FF4D6A">{{listTitle}}</span>
+</div>
+<sc-if value="{{isSpecies}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 8px; right: 8px; top: 126px; display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{speciesRows}}" as="row" hint-placeholder-count="3">
+<div style="height: 102px; border-radius: 26px; background: #232325; display: flex; align-items: center; gap: 22px; padding: 0 26px 0 22px; box-sizing: border-box">
+<img src="{{row.src}}" alt="" style="width: 50px; height: 44px; object-fit: contain; display: block">
+<span style="flex-grow: 1; font-size: 31px; font-weight: 700; line-height: 1">{{row.name}}</span>
+<sc-if value="{{row.selected}}" hint-placeholder-val="{{ false }}">
+<svg width="28" height="24" viewBox="0 0 28 24" fill="none" aria-hidden="true"><path d="M3 13L10.5 20.5L25 3.5" stroke="#FF4D6A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{isHistory}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 8px; right: 8px; top: 126px; display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{historyRows}}" as="row" hint-placeholder-count="3">
+<div style="height: 114px; border-radius: 26px; background: #232325; box-sizing: border-box; padding: 18px 22px 0 22px; display: flex; flex-direction: column">
+<div style="display: flex; align-items: baseline; gap: 8px">
+<img src="{{row.icon}}" alt="" style="width: 22px; height: 20px; object-fit: contain; display: block; align-self: center">
+<span style="font-size: 36px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums">{{row.value}}</span>
+<span style="flex-grow: 1; font-size: 26px; font-weight: 700; line-height: 1; color: #A1A1A6">{{row.unit}}</span>
+<span style="font-size: 28px; font-weight: 700; line-height: 1; color: #8A8A8E; font-variant-numeric: tabular-nums">{{row.time}}</span>
+</div>
+<span style="margin-top: 12px; font-size: 28px; font-weight: 800; line-height: 1; color: {{row.color}}">{{row.status}}</span>
+<div style="margin-top: 10px; width: {{row.bar}}; height: 8px; border-radius: 4px; background: #E8305A"></div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</div></template>
+<template id="tpl-iPhoneUI"><div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #000000; color: #FFFFFF; font-family: -apple-system, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif">
+
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 6px 34px 0 46px; box-sizing: border-box">
+<span style="font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums">{{time}}</span>
+<span style="display: flex; align-items: center; gap: 6px">
+<svg width="18" height="12" viewBox="0 0 18 12" fill="#FFFFFF"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg>
+<svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M1.2 4.3a10 10 0 0 1 13.6 0M3.6 6.9a6.4 6.4 0 0 1 8.8 0M6 9.4a3 3 0 0 1 4 0" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"></path></svg>
+<svg width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="23" height="12" rx="3.8" stroke="#FFFFFF" stroke-opacity="0.4"></rect><rect x="2" y="2" width="17" height="9" rx="2.4" fill="#FFFFFF"></rect><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="#FFFFFF" fill-opacity="0.45"></path></svg>
+</span>
+</div>
+
+<div aria-hidden="true" style="position: absolute; left: 16px; top: 64px; width: 48px; height: 48px; box-sizing: border-box; border-radius: 24px; border: 0.5px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.09); box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 6px 20px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center">
+<img src="/assets/03b2f424481109041f95dbf7cd90c6bf" alt="" style="width: 30px; height: 30px; object-fit: contain">
+</div>
+<div aria-hidden="true" style="position: absolute; right: 16px; top: 64px; width: 48px; height: 48px; box-sizing: border-box; border-radius: 24px; border: 0.5px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.09); box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 6px 20px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; color: #FFFFFF">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"></path><path d="M3.5 4.5v4h4"></path><path d="M12 7.5V12l3 2"></path></svg>
+</div>
+<div style="position: absolute; left: 80px; right: 80px; top: 68px; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center">
+<span style="font-size: 17px; font-weight: 600; line-height: 20px">Heart Rate</span>
+<span style="font-size: 13px; line-height: 16px; color: rgba(235,235,245,0.6)">Dog</span>
+</div>
+
+<div style="position: absolute; left: 35px; top: 182px; width: 320px; height: 320px">
+<svg width="320" height="320" viewBox="0 0 320 320" aria-hidden="true" style="position: absolute; left: 0; top: 0">
+<circle cx="160" cy="160" r="136" fill="none" stroke="rgba(118,118,128,0.28)" stroke-width="8" stroke-linecap="round" pathLength="100" stroke-dasharray="75 100" transform="rotate(135 160 160)"></circle>
+<circle cx="160" cy="160" r="136" fill="none" stroke="#4DDB94" stroke-opacity="0.7" stroke-width="8" pathLength="100" stroke-dasharray="{{greenDash}}" stroke-dashoffset="{{greenOff}}" transform="rotate(135 160 160)"></circle>
+<sc-if value="{{hasValue}}" hint-placeholder-val="{{true}}">
+<circle cx="{{markerX}}" cy="{{markerY}}" r="9" fill="{{markerColor}}" stroke="#000000" stroke-width="4"></circle>
+</sc-if>
+</svg>
+<span style="position: absolute; left: {{loX}}; top: {{loY}}; transform: translate(-50%, -50%); font-size: 13px; color: rgba(235,235,245,0.6); font-variant-numeric: tabular-nums">60</span>
+<span style="position: absolute; left: {{hiX}}; top: {{hiY}}; transform: translate(-50%, -50%); font-size: 13px; color: rgba(235,235,245,0.6); font-variant-numeric: tabular-nums">140</span>
+<div style="position: absolute; left: 0; right: 0; top: 96px; height: 24px; display: flex; justify-content: center">
+<span style="font-size: 17px; font-weight: 600; color: {{statusColor}}">{{statusLabel}}</span>
+</div>
+<div style="position: absolute; left: 0; right: 0; top: 122px; display: flex; flex-direction: column; align-items: center">
+<span style="font-size: 92px; line-height: 1; font-weight: 600; letter-spacing: -2px; font-variant-numeric: tabular-nums; color: {{numberColor}}">{{valueText}}</span>
+<span style="margin-top: 2px; font-size: 17px; color: rgba(235,235,245,0.6)">bpm</span>
+</div>
+</div>
+<div style="position: absolute; left: 24px; right: 24px; top: 534px; text-align: center; font-size: 17px; color: rgba(235,235,245,0.6)">
+<sc-if value="{{isReady}}" hint-placeholder-val="{{false}}">Tap anywhere for each heartbeat</sc-if>
+<sc-if value="{{hasValue}}" hint-placeholder-val="{{true}}"><span style="color: #FFFFFF; font-weight: 600; font-variant-numeric: tabular-nums">{{count}}</span> {{countNoun}}</sc-if>
+</div>
+
+<div aria-hidden="true" style="position: absolute; left: 50%; bottom: 127px; transform: translateX(-50%); height: 30px; box-sizing: border-box; padding: 3px; border-radius: 15px; border: 0.5px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.07); box-shadow: inset 0 1px 0 rgba(255,255,255,0.18); display: flex; gap: 2px">
+<span style="width: 38px; height: 24px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center"><img src="/assets/a50f71f4dde0a1c1719278dd35133559" alt="" style="width: 15px; height: 13px; object-fit: contain"></span>
+<span style="width: 38px; height: 24px; border-radius: 12px; display: flex; align-items: center; justify-content: center"><img src="/assets/8fa7412d63e8eb769da00f0c057066bd" alt="" style="width: 16px; height: 14px; object-fit: contain; opacity: 0.55"></span>
+</div>
+
+<div aria-hidden="true" style="position: absolute; left: 14px; right: 14px; bottom: 14px; height: 100px; box-sizing: border-box; border: 0.5px solid rgba(255,255,255,0.22); border-radius: 40px; background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 10px 30px rgba(0,0,0,0.5); color: #FF3B5E; font-size: 20px; font-weight: 600; display: flex; align-items: center; justify-content: center">Finish</div>
+
+</div></template>
+<template id="tpl-Main"><div lang="{{lang}}" class="{{langCls}}" style="background: #FFFFFF; color: #141416; font-family: -apple-system, 'SF Pro Display', 'Inter', 'Noto Sans Thai', system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: clip">
+
+<header class="rv {{introOn}}" style="max-width: 1200px; margin: 0 auto; padding: 22px 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; transition-delay: 2.4s">
+<a href="#top" aria-label="PinchPulse home" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #141416">
+<img src="/assets/7b076ffdded25cb81d507f218afafc1b" alt="" style="width: 40px; height: 40px; border-radius: 10px; display: block">
+<span style="font-size: 21px; font-weight: 700; letter-spacing: -0.02em">PinchPulse</span>
+</a>
+<nav aria-label="Main" style="display: flex; align-items: center; gap: 32px; flex-wrap: wrap">
+<a href="#how" style="font-size: 15px; font-weight: 500; text-decoration: none">{{t.navHow}}</a>
+<a href="#iphone" style="font-size: 15px; font-weight: 500; text-decoration: none">{{t.navIphone}}</a>
+<a href="#requirements" style="font-size: 15px; font-weight: 500; text-decoration: none">{{t.navReq}}</a>
+<a href="#pricing" style="font-size: 15px; font-weight: 600; text-decoration: none; color: #FFFFFF; background: #141416; padding: 12px 20px; border-radius: 999px">{{t.navTry}}</a>
+<button onClick="{{toggleLang}}" aria-label="{{t.langAria}}" style="min-width: 44px; min-height: 44px; padding: 0 12px; border: 1px solid #E2E2E6; border-radius: 999px; background: #FFFFFF; color: #3A3A40; font-family: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; cursor: pointer">{{t.langBtn}}</button>
+</nav>
+</header>
+
+<div id="top" ref="{{setWrap}}" style="position: relative; height: {{wrapH}}px">
+<div id="how" aria-hidden="true" style="position: absolute; left: 0; top: {{howAnchor}}px; width: 1px; height: 1px"></div>
+<div ref="{{setScene}}" onPointerDown="{{onHeroDown}}" style="position: sticky; top: 0; height: {{sceneH}}px; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: pan-y">
+
+<div style="position: absolute; inset: 0; clip-path: {{handsClip}}">
+<div aria-hidden="true" style="position: absolute; left: {{cardL}}px; right: {{cardL}}px; top: {{cardT}}px; bottom: {{cardT}}px; border-radius: 32px; background: #F4F4F5; opacity: {{cardO}}"></div>
+<button ref="{{setStage}}" onClick="{{onStageKey}}" aria-label="Pinch along: press to pinch once, the Watch counts your rhythm" style="opacity: {{spriteO}}; visibility: {{spriteVis}}; position: absolute; left: {{stX}}px; top: {{stY}}px; width: {{stW}}px; height: {{stH}}px; overflow: hidden; padding: 0; margin: 0; border: none; background: transparent; cursor: pointer;">
+<div class="pp-sprite" aria-hidden="true" style="position: absolute; inset: 0; background-position: {{spritePos}}; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000000 {{spFade}}%, #000000 97%, transparent 100%), linear-gradient(180deg, transparent 0%, #000000 7%, #000000 90%, transparent 100%); -webkit-mask-composite: source-in; mask-image: linear-gradient(90deg, transparent 0%, #000000 {{spFade}}%, #000000 97%, transparent 100%), linear-gradient(180deg, transparent 0%, #000000 7%, #000000 90%, transparent 100%); mask-composite: intersect"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 1920px; height: 800px; transform: scale({{worldScale}}); transform-origin: 0 0">
+<div style="position: absolute; left: 0; top: 0; width: 416px; height: 496px; transform-origin: 0 0; transform: {{uiMatrix}}; border-radius: 60px / 66px; overflow: hidden; background: #000000">
+<dc-import name="WatchUI" view="live" value="{{bpm}}" count="{{count}}" activity="{{activity}}" time="{{clock}}" h24="{{h24}}" hint-size="416px,496px"></dc-import>
+<div style="position: absolute; inset: 0; pointer-events: none; border-radius: inherit; box-shadow: inset 0 0 28px 6px rgba(0,0,0,0.55)"></div>
+<div style="position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.07) 9%, rgba(255,255,255,0.03) 18%, rgba(255,255,255,0.01) 26%, rgba(255,255,255,0) 32%)"></div>
+</div>
+</div>
+</button>
+<img ref="{{setThImg}}" src="/assets/208a50a5d345146d2bf8f6e2ad7b48c7" alt="Hand in a white coat holding a stethoscope chestpiece" style="position: absolute; left: {{thX}}px; top: {{thY}}px; width: {{thW}}px; height: auto; display: block; -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000000 12%, #000000 78%, transparent 100%); mask-image: linear-gradient(180deg, transparent 0%, #000000 12%, #000000 78%, transparent 100%); opacity: {{thO}}; visibility: {{thImgVis}}; transition: opacity .35s ease; pointer-events: none">
+</div>
+
+<div style="position: absolute; left: {{heroL}}px; top: {{heroT}}px; width: {{heroW}}px; opacity: {{heroO}}; transform: translateX({{heroDX}}px); pointer-events: {{heroPE}}">
+<h1 style="margin: 0; font-size: {{h1Size}}px; line-height: 1; font-weight: 800; letter-spacing: -0.04em">
+<span class="rx {{introOn}}" style="display: block; transition-delay: 0.6s">{{t.h1a}}</span>
+<span class="rx {{introOn}}" style="display: block; color: #E8305A; transition-delay: 1.1s">{{t.h1b}}</span>
+<span class="rx {{introOn}}" style="display: block; transition-delay: 1.6s">{{t.h1c}}</span>
+</h1>
+<p class="rv {{introOn}}" style="margin: 24px 0 0; font-size: 21px; line-height: 1.45; color: #4A4A50; max-width: 400px; transition-delay: 2.1s">{{t.heroSub1}}<br>{{t.heroSub2}}</p>
+<div class="rv {{introOn}}" style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; transition-delay: 2.4s">
+<a href="#pricing" style="display: inline-flex; align-items: center; min-height: 52px; box-sizing: border-box; padding: 0 26px; border-radius: 999px; background: #141416; color: #FFFFFF; font-size: 17px; font-weight: 600; text-decoration: none">{{t.heroTry}}</a>
+<a href="#pricing" style="display: inline-flex; align-items: center; min-height: 52px; box-sizing: border-box; padding: 0 26px; border-radius: 999px; background: #F2F2F4; color: #141416; font-size: 17px; font-weight: 600; text-decoration: none">{{t.heroBuy}}</a>
+</div>
+<a href="#pricing" class="rv {{introOn}}" aria-label="Download PinchPulse on the App Store [App Store link]" style="margin-top: 16px; display: inline-flex; align-items: center; gap: 10px; min-height: 50px; box-sizing: border-box; padding: 0 18px; border-radius: 10px; background: #000000; color: #FFFFFF; text-decoration: none; transition-delay: 2.6s">
+<svg width="18" height="24" viewBox="0 0 22 26" fill="none" aria-hidden="true"><rect x="3" y="4.5" width="16" height="17" rx="5" stroke="#FFFFFF" stroke-width="2"></rect><path d="M7 4.5V1.5h8v3M7 21.5v3h8v-3" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"></path></svg>
+<span style="display: flex; flex-direction: column; line-height: 1.05"><small style="font-size: 10px; font-weight: 500">{{t.badgeTop}}</small><b style="font-size: 19px; font-weight: 600; letter-spacing: -0.01em">App Store</b></span>
+</a>
+</div>
+
+<span class="rv {{introOn}}" aria-live="polite" style="position: absolute; left: {{hintX}}px; top: {{hintY}}px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: #F2F2F4; font-size: 14px; font-weight: 600; color: #3A3A40; white-space: nowrap; transition-delay: 3s; visibility: {{hintVis}}">
+<img src="/assets/a023e7b0eb129d13d03d0fc6698f8cc0" alt="" style="width: 18px; height: 16px; display: block">
+{{hint}}
+</span>
+
+<div style="position: absolute; left: {{p2LX}}px; top: {{p2Y}}px; width: 440px; margin-left: -220px; opacity: {{p2O}}; transition: opacity .35s ease; transform: translateY({{p2DY}}px); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; pointer-events: none">
+<h2 style="margin: 0; font-size: {{p2Size}}px; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em">{{t.p2L}}<span style="color: #E8305A">{{t.p2Lr}}</span></h2>
+<p style="margin: 0; font-size: 17px; line-height: 1.4; color: #4A4A50">{{t.p2Lcap}}</p>
+</div>
+<div aria-hidden="true" style="position: absolute; left: {{p2LX}}px; top: {{connTop}}px; width: 2px; height: {{connLH}}px; margin-left: -1px; border-radius: 1px; background: linear-gradient(180deg, rgba(232,48,90,0.15), #E8305A); opacity: {{connO}}; transition: opacity .35s ease"></div>
+<div aria-hidden="true" style="position: absolute; left: {{p2LX}}px; top: {{connLDot}}px; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 4px; background: #E8305A; opacity: {{dotO}}; transition: opacity .35s ease; transform: scale({{dotS}})"></div>
+<div style="position: absolute; left: {{p2RX}}px; top: {{p2RY}}px; width: 440px; margin-left: -220px; opacity: {{p2O}}; transition: opacity .35s ease; transform: translateY({{p2DY}}px); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; pointer-events: none">
+<h2 style="margin: 0; font-size: {{p2Size}}px; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em">{{t.p2R}}<span style="color: #E8305A">{{t.p2Rr}}</span></h2>
+<p style="margin: 0; font-size: 17px; line-height: 1.4; color: #4A4A50">{{t.p2Rcap}}</p>
+</div>
+<div aria-hidden="true" style="position: absolute; left: {{p2RX}}px; top: {{connTop}}px; width: 2px; height: {{connRH}}px; margin-left: -1px; border-radius: 1px; background: linear-gradient(180deg, rgba(232,48,90,0.15), #E8305A); opacity: {{connO}}; transition: opacity .35s ease"></div>
+<div aria-hidden="true" style="position: absolute; left: {{p2RX}}px; top: {{connRDot}}px; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 4px; background: #E8305A; opacity: {{dotO}}; transition: opacity .35s ease; transform: scale({{dotS}})"></div>
+<p style="position: absolute; left: {{p2X}}px; top: {{p2SubY}}px; width: 360px; margin: 0 0 0 -180px; opacity: {{p2SubO}}; transition: opacity .35s ease; transform: translateY({{p2DY}}px); text-align: center; font-size: 19px; line-height: 1.45; color: #4A4A50; pointer-events: none">{{t.p2Sub}}</p>
+
+<div aria-hidden="true" style="position: absolute; inset: 0; opacity: {{vidO}}; visibility: {{vidVis}}; pointer-events: none">
+<div ref="{{setWorld}}" style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; will-change: transform; transform: {{vidWorld}}">
+<div class="{{vidShake}}" style="--sa: {{shakeA}}px; --sr: 1.1deg; position: absolute; left: 0; top: 0; width: 1920px; height: 1080px">
+<canvas ref="{{setCanvas}}" width="768" height="432" style="position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000000 {{spFade}}%, #000000 94%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0%, #000000 {{spFade}}%, #000000 94%, transparent 100%)"></canvas>
+<img src="/assets/d78693940668e5865c910aed097f5505" alt="" style="position: absolute; left: 600px; top: 40px; width: 740px; height: 1040px; display: block; opacity: {{vidStillO}}; transition: opacity .2s ease">
+<div ref="{{setVOverlay}}" style="position: absolute; left: 0; top: 0; width: 416px; height: 496px; transform-origin: 0 0; will-change: transform; transform: {{vidMatrix}}; opacity: {{vidUiO}}; transition: opacity .35s ease; border-radius: 60px / 66px; overflow: hidden; background: #000000">
+<dc-import name="WatchUI" view="live" value="96" count="12" activity="Counting" time="{{clock}}" h24="{{h24}}" hint-size="416px,496px"></dc-import>
+<div style="position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 28px 6px rgba(0,0,0,0.55)"></div>
+<div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.07) 9%, rgba(255,255,255,0.03) 18%, rgba(255,255,255,0) 32%)"></div>
+</div>
+</div>
+</div>
+</div>
+<div aria-hidden="true" style="position: absolute; inset: 0; visibility: {{stCvVis}}; pointer-events: none">
+<canvas ref="{{setStCanvas}}" width="640" height="309" aria-hidden="true" style="position: absolute; left: {{thX}}px; top: {{thY}}px; width: {{thW}}px; height: {{thHpx}}px; display: block; -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000000 12%, #000000 78%, transparent 100%); mask-image: linear-gradient(180deg, transparent 0%, #000000 12%, #000000 78%, transparent 100%); pointer-events: none"></canvas>
+</div>
+<div style="position: absolute; inset: 0; opacity: {{howO}}; pointer-events: {{howPE}}; visibility: {{howVis}}; transition: opacity .5s ease">
+<div ref="{{setHowInner}}" style="max-width: 1200px; margin: 0 auto; padding: 0 32px; display: flex; flex-direction: column; gap: 40px; transform: translateY({{howTop}}px) scale({{howS}}); transform-origin: 50% 0">
+<div class="rv {{howOn}}" style="text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center">
+<span style="display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px; background: #F4F4F5; font-size: 15px; font-weight: 600; color: #3A3A40">
+{{t.howPill}}
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#E8305A" stroke-width="2.2"></circle><path d="M9.2 9.3a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.5-2.8 4.2" stroke="#E8305A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="17.6" r="1.3" fill="#E8305A"></circle></svg>
+</span>
+<h2 style="margin: 0; font-size: 60px; line-height: 1.05; font-weight: 800; letter-spacing: -0.04em; display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap">
+<span>{{t.howA}}</span>
+<svg width="62" height="34" viewBox="0 0 62 34" fill="none" role="img" aria-label="becomes"><path d="M3 17h52M40 3l15 14-15 14" stroke="#141416" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span>{{t.howB}}<span style="color: #E8305A">{{t.howBr}}</span></span>
+</h2>
+<p style="margin: 0; font-size: 20px; color: #4A4A50">{{t.howSub}}</p>
+</div>
+
+<div style="display: flex; gap: 40px; flex-wrap: wrap; align-items: center; justify-content: center">
+
+<div style="position: relative; flex: 0 0 360px; width: 360px; height: 520px; display: flex; align-items: center; justify-content: center">
+<div aria-hidden="true" class="pp-floor" style="opacity: {{howFxO}}; transition: opacity .4s ease; position: absolute; left: 70px; right: 70px; bottom: 6px; height: 18px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,0.28), rgba(0,0,0,0))"></div>
+<svg aria-hidden="true" class="pp-tick pp-tick-l" width="18" height="74" viewBox="0 0 18 74" fill="none" style="visibility: {{howFxVis}}; position: absolute; left: 12px; top: 223px"><path d="M14 4v66" stroke="#141416" stroke-width="2" stroke-linecap="round" opacity="0.55"></path><path d="M4 18v38" stroke="#141416" stroke-width="2" stroke-linecap="round" opacity="0.28"></path></svg>
+<svg aria-hidden="true" class="pp-tick pp-tick-r" width="18" height="74" viewBox="0 0 18 74" fill="none" style="visibility: {{howFxVis}}; position: absolute; right: 12px; top: 223px"><path d="M4 4v66" stroke="#141416" stroke-width="2" stroke-linecap="round" opacity="0.55"></path><path d="M14 18v38" stroke="#141416" stroke-width="2" stroke-linecap="round" opacity="0.28"></path></svg>
+<div class="pp-shake" aria-hidden="true" style="opacity: {{howWatchO}}; position: relative; width: 300px; height: 515px">
+<img src="/assets/d870ebf297520072998ac7be50a9b671" alt="" style="width: 300px; height: 515px; display: block">
+<div ref="{{setHowScreen}}" style="position: absolute; left: 7.73%; top: 22.5%; width: 79.9%; height: 56.2%; overflow: hidden; border-radius: 16% / 13%; background: #000000">
+<div style="position: absolute; left: 50%; top: 50%; width: 416px; height: 496px; margin-left: -208px; margin-top: -248px; transform: scale(0.5762)"><dc-import name="WatchUI" view="live" value="96" count="12" activity="Counting" time="{{clock}}" h24="{{h24}}" hint-size="416px,496px"></dc-import></div>
+</div>
+</div>
+</div>
+
+<div style="flex: 1 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 28px">
+<figure class="rv {{howOn}}" style="transition-delay: 0.4s; margin: 0; padding: 28px 32px 24px; border-radius: 32px; background: #F4F4F5">
+<figcaption style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 14px"><span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em">{{t.motion}}</span><span style="font-size: 14px; font-weight: 500; color: #6B6B70">{{t.motionSub}}</span></figcaption>
+<svg role="img" aria-label="Accelerometer X, Y and Z traces with a spike at every pinch" viewBox="0 0 1000 230" width="100%" style="display: block">
+<defs><clipPath id="ppclip"><rect x="70" y="0" width="930" height="230"></rect></clipPath></defs>
+<g font-family="-apple-system, Inter, sans-serif" font-size="15" font-weight="600" fill="#8E8E93" text-anchor="middle">
+<text x="29" y="47">X</text>
+<text x="29" y="110">Y</text>
+<text x="29" y="173">Z</text>
+</g>
+<line x1="880" y1="6" x2="880" y2="200" stroke="#E8305A" stroke-width="1.5" stroke-dasharray="3 5" opacity="0.45"></line>
+<circle class="pp-glow" cx="880" cy="214" r="12" fill="#E8305A"></circle>
+<circle cx="880" cy="214" r="5" fill="#E8305A"></circle>
+<g clip-path="url(#ppclip)">
+<g class="pp-scroll">
+<path d="M0.0 42.9 L2.5 43.3 L5.0 43.2 L7.5 42.0 L10.0 42.9 L12.5 42.4 L15.0 42.5 L17.5 40.5 L20.0 40.5 L22.5 40.8 L25.0 42.0 L27.5 42.1 L30.0 41.6 L32.5 42.5 L35.0 43.0 L37.5 44.1 L40.0 42.4 L42.5 41.9 L45.0 40.9 L47.5 41.9 L50.0 41.4 L52.5 40.8 L55.0 40.6 L57.5 41.4 L60.0 43.2 L62.5 43.0 L65.0 43.1 L67.5 42.0 L70.0 43.2 L72.5 42.6 L75.0 42.2 L77.5 40.4 L80.0 40.4 L82.5 41.3 L85.0 41.8 L87.5 42.1 L90.0 41.4 L92.5 42.9 L95.0 43.2 L97.5 44.0 L100.0 42.2 L102.5 41.8 L105.0 41.3 L107.5 41.8 L110.0 41.4 L112.5 40.4 L115.0 40.9 L117.5 41.5 L120.0 42.8 L122.5 39.1 L125.0 30.4 L127.5 15.7 L130.0 9.7 L132.5 18.2 L135.0 35.0 L137.5 47.0 L140.0 50.4 L142.5 48.4 L145.0 44.2 L147.5 42.6 L150.0 41.4 L152.5 43.1 L155.0 43.4 L157.5 43.7 L160.0 42.0 L162.5 41.6 L165.0 41.7 L167.5 41.7 L170.0 41.4 L172.5 40.1 L175.0 41.2 L177.5 41.8 L180.0 43.5 L182.5 42.5 L185.0 42.7 L187.5 42.5 L190.0 43.3 L192.5 42.7 L195.0 41.2 L197.5 40.6 L200.0 40.5 L202.5 42.0 L205.0 41.4 L207.5 41.8 L210.0 41.5 L212.5 43.3 L215.0 43.6 L217.5 43.3 L220.0 42.0 L222.5 41.5 L225.0 42.1 L227.5 41.5 L230.0 41.2 L232.5 39.9 L235.0 41.5 L237.5 42.1 L240.0 43.3 L242.5 42.4 L245.0 42.5 L247.5 42.9 L250.0 43.2 L252.5 42.7 L255.0 40.8 L257.5 40.8 L260.0 40.7 L262.5 42.1 L265.0 41.2 L267.5 41.6 L270.0 41.8 L272.5 43.4 L275.0 43.7 L277.5 42.8 L280.0 42.1 L282.5 41.5 L285.0 42.4 L287.5 41.2 L290.0 41.0 L292.5 40.0 L295.0 41.7 L297.5 42.4 L300.0 43.0 L302.5 42.4 L305.0 42.4 L307.5 43.4 L310.0 43.0 L312.5 42.5 L315.0 40.5 L317.5 41.0 L320.0 40.9 L322.5 42.0 L325.0 41.1 L327.5 41.4 L330.0 42.2 L332.5 43.4 L335.0 43.8 L337.5 42.4 L340.0 42.3 L342.5 41.6 L345.0 42.6 L347.5 41.0 L350.0 40.7 L352.5 40.2 L355.0 41.8 L357.5 42.6 L360.0 42.6 L362.5 42.5 L365.0 42.4 L367.5 43.7 L370.0 42.2 L372.5 38.7 L375.0 27.9 L377.5 14.8 L380.0 7.7 L382.5 17.2 L385.0 34.3 L387.5 47.7 L390.0 52.7 L392.5 50.0 L395.0 46.3 L397.5 42.6 L400.0 42.5 L402.5 41.9 L405.0 42.5 L407.5 40.9 L410.0 40.4 L412.5 40.6 L415.0 41.9 L417.5 42.8 L420.0 42.1 L422.5 42.6 L425.0 42.5 L427.5 44.0 L430.0 42.6 L432.5 41.9 L435.0 40.5 L437.5 41.3 L440.0 41.5 L442.5 41.3 L445.0 41.1 L447.5 41.2 L450.0 43.2 L452.5 43.3 L455.0 43.5 L457.5 41.9 L460.0 42.5 L462.5 42.2 L465.0 42.2 L467.5 40.8 L470.0 40.2 L472.5 41.1 L475.0 41.9 L477.5 42.8 L480.0 41.8 L482.5 42.7 L485.0 42.8 L487.5 44.0 L490.0 42.5 L492.5 41.6 L495.0 40.8 L497.5 41.3 L500.0 41.7 L502.5 40.9 L505.0 41.1 L507.5 41.4 L510.0 43.5 L512.5 43.2 L515.0 43.2 L517.5 41.9 L520.0 42.6 L522.5 42.5 L525.0 41.8 L527.5 40.7 L530.0 40.0 L532.5 41.5 L535.0 41.9 L537.5 42.7 L540.0 41.6 L542.5 42.8 L545.0 43.1 L547.5 43.8 L550.0 42.3 L552.5 41.2 L555.0 41.2 L557.5 41.3 L560.0 41.8 L562.5 40.5 L565.0 41.2 L567.5 41.6 L570.0 43.7 L572.5 43.1 L575.0 42.9 L577.5 42.1 L580.0 42.6 L582.5 42.7 L585.0 41.3 L587.5 40.7 L590.0 40.1 L592.5 41.9 L595.0 41.8 L597.5 42.4 L600.0 41.7 L602.5 42.9 L605.0 43.5 L607.5 43.5 L610.0 42.3 L612.5 41.0 L615.0 41.6 L617.5 41.2 L620.0 41.1 L622.5 36.7 L625.0 28.8 L627.5 15.6 L630.0 10.0 L632.5 18.6 L635.0 35.8 L637.5 49.0 L640.0 52.6 L642.5 49.5 L645.0 43.5 L647.5 41.3 L650.0 40.3 L652.5 42.1 L655.0 41.8 L657.5 42.1 L660.0 41.9 L662.5 43.0 L665.0 43.8 L667.5 43.0 L670.0 42.2 L672.5 40.9 L675.0 41.9 L677.5 41.3 L680.0 41.4 L682.5 40.2 L685.0 41.4 L687.5 42.4 L690.0 43.4 L692.5 43.0 L695.0 42.2 L697.5 42.9 L700.0 42.6 L702.5 42.7 L705.0 40.6 L707.5 40.7 L710.0 40.6 L712.5 42.1 L715.0 41.8 L717.5 41.7 L720.0 42.2 L722.5 43.1 L725.0 44.0 L727.5 42.6 L730.0 42.1 L732.5 41.0 L735.0 42.1 L737.5 41.3 L740.0 41.1 L742.5 40.3 L745.0 41.5 L747.5 42.9 L750.0 43.1 L752.5 42.9 L755.0 42.1 L757.5 43.2 L760.0 42.6 L762.5 42.5 L765.0 40.4 L767.5 40.7 L770.0 41.0 L772.5 41.9 L775.0 41.8 L777.5 41.4 L780.0 42.6 L782.5 43.2 L785.0 44.1 L787.5 42.3 L790.0 42.0 L792.5 41.2 L795.0 42.1 L797.5 41.2 L800.0 40.6 L802.5 40.6 L805.0 41.6 L807.5 43.2 L810.0 42.7 L812.5 42.9 L815.0 42.1 L817.5 43.5 L820.0 42.6 L822.5 42.1 L825.0 40.4 L827.5 40.7 L830.0 41.4 L832.5 41.7 L835.0 41.7 L837.5 41.3 L840.0 43.0 L842.5 43.3 L845.0 43.9 L847.5 42.0 L850.0 41.9 L852.5 41.6 L855.0 42.0 L857.5 41.2 L860.0 40.2 L862.5 40.9 L865.0 41.7 L867.5 43.3 L870.0 41.8 L872.5 39.2 L875.0 29.9 L877.5 17.2 L880.0 9.1 L882.5 17.1 L885.0 33.8 L887.5 47.2 L890.0 51.7 L892.5 48.0 L895.0 44.3 L897.5 41.9 L900.0 43.4 L902.5 43.4 L905.0 43.6 L907.5 41.9 L910.0 41.9 L912.5 42.0 L915.0 41.8 L917.5 41.1 L920.0 40.0 L922.5 41.3 L925.0 41.9 L927.5 43.3 L930.0 42.2 L932.5 42.7 L935.0 42.7 L937.5 43.5 L940.0 42.6 L942.5 41.1 L945.0 40.8 L947.5 40.8 L950.0 42.0 L952.5 41.1 L955.0 41.6 L957.5 41.5 L960.0 43.5 L962.5 43.5 L965.0 43.1 L967.5 42.0 L970.0 41.8 L972.5 42.4 L975.0 41.5 L977.5 41.0 L980.0 39.9 L982.5 41.6 L985.0 42.1 L987.5 43.1 L990.0 42.1 L992.5 42.6 L995.0 43.2 L997.5 43.3 L1000.0 42.6 L1002.5 40.7 L1005.0 41.0 L1007.5 40.9 L1010.0 42.0 L1012.5 40.8 L1015.0 41.4 L1017.5 41.9 L1020.0 43.6 L1022.5 43.6 L1025.0 42.7 L1027.5 42.2 L1030.0 41.9 L1032.5 42.6 L1035.0 41.1 L1037.5 40.8 L1040.0 40.0 L1042.5 41.8 L1045.0 42.3 L1047.5 42.7 L1050.0 42.2 L1052.5 42.6 L1055.0 43.6 L1057.5 43.1 L1060.0 42.4 L1062.5 40.5 L1065.0 41.3 L1067.5 41.1 L1070.0 41.8 L1072.5 40.7 L1075.0 41.3 L1077.5 42.3 L1080.0 43.5 L1082.5 43.6 L1085.0 42.3 L1087.5 42.4 L1090.0 42.0 L1092.5 42.7 L1095.0 40.8 L1097.5 40.6 L1100.0 40.3 L1102.5 42.0 L1105.0 42.4 L1107.5 42.3 L1110.0 42.3 L1112.5 42.6 L1115.0 43.9 L1117.5 42.7 L1120.0 41.6 L1122.5 36.9 L1125.0 29.0 L1127.5 14.9 L1130.0 7.9 L1132.5 16.3 L1135.0 34.6 L1137.5 49.3 L1140.0 53.3 L1142.5 50.2 L1145.0 44.6 L1147.5 43.3 L1150.0 42.3 L1152.5 42.5 L1155.0 40.7 L1157.5 40.4 L1160.0 40.7 L1162.5 42.0 L1165.0 42.5 L1167.5 41.9 L1170.0 42.5 L1172.5 42.8 L1175.0 44.1 L1177.5 42.5 L1180.0 41.9 L1182.5 40.7 L1185.0 41.6 L1187.5 41.5 L1190.0 41.0 L1192.5 40.8 L1195.0 41.3 L1197.5 43.3 L1200.0 43.2 L1202.5 43.3 L1205.0 41.9 L1207.5 42.8 L1210.0 42.4 L1212.5 42.2 L1215.0 40.6 L1217.5 40.2 L1220.0 41.2 L1222.5 41.9 L1225.0 42.5 L1227.5 41.6 L1230.0 42.8 L1232.5 43.0 L1235.0 44.0 L1237.5 42.3 L1240.0 41.6 L1242.5 41.0 L1245.0 41.6 L1247.5 41.6 L1250.0 40.6 L1252.5 41.0 L1255.0 41.5 L1257.5 43.5 L1260.0 43.0 L1262.5 43.0 L1265.0 42.0 L1267.5 42.9 L1270.0 42.6" stroke="#141416" stroke-width="2.2" fill="none" stroke-linejoin="round"></path>
+<path d="M0.0 106.0 L2.5 104.9 L5.0 106.0 L7.5 105.2 L10.0 104.8 L12.5 103.2 L15.0 103.6 L17.5 104.6 L20.0 105.1 L22.5 105.3 L25.0 104.7 L27.5 106.1 L30.0 106.3 L32.5 106.8 L35.0 104.7 L37.5 104.5 L40.0 104.1 L42.5 104.8 L45.0 104.3 L47.5 103.5 L50.0 104.2 L52.5 105.1 L55.0 106.8 L57.5 105.8 L60.0 105.8 L62.5 105.1 L65.0 106.1 L67.5 105.2 L70.0 104.3 L72.5 103.3 L75.0 103.6 L77.5 105.0 L80.0 104.8 L82.5 105.2 L85.0 104.6 L87.5 106.4 L90.0 106.4 L92.5 106.5 L95.0 104.6 L97.5 104.4 L100.0 104.5 L102.5 104.6 L105.0 104.2 L107.5 103.2 L110.0 104.6 L112.5 105.3 L115.0 106.7 L117.5 105.5 L120.0 105.3 L122.5 103.6 L125.0 100.0 L127.5 91.9 L130.0 84.6 L132.5 85.8 L135.0 94.8 L137.5 106.5 L140.0 111.2 L142.5 111.1 L145.0 107.7 L147.5 107.5 L150.0 106.7 L152.5 106.0 L155.0 104.6 L157.5 104.3 L160.0 104.9 L162.5 104.3 L165.0 104.1 L167.5 103.1 L170.0 104.9 L172.5 105.5 L175.0 106.5 L177.5 105.4 L180.0 105.6 L182.5 105.8 L185.0 105.9 L187.5 105.2 L190.0 103.4 L192.5 103.7 L195.0 103.8 L197.5 105.3 L200.0 104.3 L202.5 104.9 L205.0 105.1 L207.5 106.7 L210.0 106.6 L212.5 105.5 L215.0 104.8 L217.5 104.3 L220.0 105.2 L222.5 104.0 L225.0 103.9 L227.5 103.2 L230.0 105.2 L232.5 105.7 L235.0 106.2 L237.5 105.4 L240.0 105.5 L242.5 106.3 L245.0 105.7 L247.5 105.0 L250.0 103.2 L252.5 104.0 L255.0 104.1 L257.5 105.2 L260.0 104.2 L262.5 104.8 L265.0 105.6 L267.5 106.7 L270.0 106.6 L272.5 105.1 L275.0 105.0 L277.5 104.4 L280.0 105.3 L282.5 103.7 L285.0 103.7 L287.5 103.5 L290.0 105.3 L292.5 105.9 L295.0 105.7 L297.5 105.5 L300.0 105.5 L302.5 106.6 L305.0 105.4 L307.5 104.8 L310.0 103.1 L312.5 104.2 L315.0 104.3 L317.5 104.9 L320.0 104.2 L322.5 104.7 L325.0 106.1 L327.5 106.5 L330.0 106.5 L332.5 104.8 L335.0 105.1 L337.5 104.6 L340.0 105.2 L342.5 103.6 L345.0 103.5 L347.5 103.9 L350.0 105.3 L352.5 106.0 L355.0 105.3 L357.5 105.7 L360.0 105.6 L362.5 106.8 L365.0 105.2 L367.5 104.5 L370.0 102.9 L372.5 102.5 L375.0 98.5 L377.5 91.1 L380.0 85.1 L382.5 87.0 L385.0 97.7 L387.5 107.7 L390.0 113.0 L392.5 110.6 L395.0 108.2 L397.5 105.7 L400.0 105.1 L402.5 103.5 L405.0 103.3 L407.5 104.4 L410.0 105.3 L412.5 106.0 L415.0 105.0 L417.5 105.9 L420.0 105.8 L422.5 106.8 L425.0 105.0 L427.5 104.2 L430.0 103.6 L432.5 104.4 L435.0 104.7 L437.5 104.0 L440.0 104.4 L442.5 104.8 L445.0 106.8 L447.5 106.2 L450.0 106.1 L452.5 104.7 L455.0 105.4 L457.5 105.1 L460.0 104.5 L462.5 103.5 L465.0 103.2 L467.5 104.9 L470.0 105.2 L472.5 105.9 L475.0 104.8 L477.5 106.1 L480.0 106.1 L482.5 106.5 L485.0 104.8 L487.5 103.9 L490.0 104.0 L492.5 104.3 L495.0 104.8 L497.5 103.6 L500.0 104.6 L502.5 105.1 L505.0 107.0 L507.5 106.1 L510.0 105.7 L512.5 104.9 L515.0 105.4 L517.5 105.3 L520.0 104.0 L522.5 103.5 L525.0 103.3 L527.5 105.2 L530.0 105.1 L532.5 105.7 L535.0 104.9 L537.5 106.2 L540.0 106.5 L542.5 106.2 L545.0 104.8 L547.5 103.7 L550.0 104.4 L552.5 104.3 L555.0 104.7 L557.5 103.4 L560.0 104.8 L562.5 105.4 L565.0 106.9 L567.5 106.0 L570.0 105.4 L572.5 105.3 L575.0 105.4 L577.5 105.4 L580.0 103.6 L582.5 103.6 L585.0 103.5 L587.5 105.4 L590.0 105.0 L592.5 105.3 L595.0 105.1 L597.5 106.3 L600.0 106.7 L602.5 105.7 L605.0 104.7 L607.5 103.7 L610.0 104.8 L612.5 104.2 L615.0 104.4 L617.5 103.3 L620.0 104.5 L622.5 104.0 L625.0 100.5 L627.5 92.6 L630.0 85.9 L632.5 88.0 L635.0 96.5 L637.5 106.6 L640.0 109.9 L642.5 109.6 L645.0 106.7 L647.5 106.2 L650.0 105.1 L652.5 105.0 L655.0 105.5 L657.5 106.3 L660.0 106.9 L662.5 105.2 L665.0 104.7 L667.5 103.8 L670.0 105.0 L672.5 104.1 L675.0 104.1 L677.5 103.5 L680.0 105.0 L682.5 106.2 L685.0 106.2 L687.5 105.9 L690.0 105.0 L692.5 106.1 L695.0 105.3 L697.5 105.0 L700.0 103.1 L702.5 103.7 L705.0 104.2 L707.5 105.2 L710.0 104.9 L712.5 104.8 L715.0 105.9 L717.5 106.4 L720.0 106.9 L722.5 104.9 L725.0 104.7 L727.5 104.0 L730.0 105.0 L732.5 104.1 L735.0 103.7 L737.5 103.8 L740.0 105.1 L742.5 106.5 L745.0 105.8 L747.5 105.8 L750.0 105.1 L752.5 106.3 L755.0 105.3 L757.5 104.7 L760.0 103.1 L762.5 103.8 L765.0 104.6 L767.5 104.9 L770.0 104.9 L772.5 104.6 L775.0 106.3 L777.5 106.4 L780.0 106.7 L782.5 104.6 L785.0 104.7 L787.5 104.4 L790.0 104.9 L792.5 104.0 L795.0 103.4 L797.5 104.3 L800.0 105.2 L802.5 106.6 L805.0 105.5 L807.5 105.8 L810.0 105.3 L812.5 106.4 L815.0 105.2 L817.5 104.2 L820.0 103.3 L822.5 103.8 L825.0 104.9 L827.5 104.6 L830.0 104.9 L832.5 104.7 L835.0 106.6 L837.5 106.4 L840.0 106.3 L842.5 104.6 L845.0 104.7 L847.5 104.8 L850.0 104.6 L852.5 103.9 L855.0 103.1 L857.5 104.7 L860.0 105.3 L862.5 106.5 L865.0 105.2 L867.5 105.7 L870.0 105.3 L872.5 104.5 L875.0 99.0 L877.5 90.4 L880.0 84.4 L882.5 86.2 L885.0 96.3 L887.5 105.5 L890.0 111.5 L892.5 110.9 L895.0 109.7 L897.5 107.3 L900.0 106.0 L902.5 104.7 L905.0 104.7 L907.5 105.1 L910.0 104.2 L912.5 103.8 L915.0 103.1 L917.5 105.0 L920.0 105.4 L922.5 106.3 L925.0 105.2 L927.5 105.7 L930.0 106.1 L932.5 106.1 L935.0 105.0 L937.5 103.4 L940.0 103.9 L942.5 104.0 L945.0 105.1 L947.5 104.0 L950.0 104.8 L952.5 105.3 L955.0 106.8 L957.5 106.4 L960.0 105.4 L962.5 104.9 L965.0 104.7 L967.5 105.3 L970.0 103.8 L972.5 103.7 L975.0 103.2 L977.5 105.3 L980.0 105.6 L982.5 105.9 L985.0 105.3 L987.5 105.7 L990.0 106.5 L992.5 105.7 L995.0 104.9 L997.5 103.2 L1000.0 104.3 L1002.5 104.2 L1005.0 104.9 L1007.5 103.9 L1010.0 104.8 L1012.5 105.7 L1015.0 106.7 L1017.5 106.4 L1020.0 105.0 L1022.5 105.2 L1025.0 104.8 L1027.5 105.4 L1030.0 103.5 L1032.5 103.6 L1035.0 103.6 L1037.5 105.4 L1040.0 105.7 L1042.5 105.5 L1045.0 105.5 L1047.5 105.8 L1050.0 106.8 L1052.5 105.4 L1055.0 104.7 L1057.5 103.3 L1060.0 104.5 L1062.5 104.3 L1065.0 104.6 L1067.5 103.9 L1070.0 104.8 L1072.5 106.2 L1075.0 106.5 L1077.5 106.3 L1080.0 104.8 L1082.5 105.4 L1085.0 104.9 L1087.5 105.2 L1090.0 103.4 L1092.5 103.5 L1095.0 104.0 L1097.5 105.4 L1100.0 105.7 L1102.5 105.1 L1105.0 105.7 L1107.5 105.9 L1110.0 106.9 L1112.5 105.1 L1115.0 104.5 L1117.5 103.4 L1120.0 104.2 L1122.5 102.6 L1125.0 98.1 L1127.5 90.8 L1130.0 85.6 L1132.5 88.9 L1135.0 97.4 L1137.5 107.4 L1140.0 111.3 L1142.5 111.6 L1145.0 108.0 L1147.5 105.7 L1150.0 103.4 L1152.5 103.4 L1155.0 104.5 L1157.5 105.2 L1160.0 105.7 L1162.5 104.8 L1165.0 106.0 L1167.5 106.1 L1170.0 106.8 L1172.5 104.8 L1175.0 104.3 L1177.5 103.8 L1180.0 104.6 L1182.5 104.5 L1185.0 103.7 L1187.5 104.3 L1190.0 105.0 L1192.5 106.9 L1195.0 106.0 L1197.5 105.9 L1200.0 104.8 L1202.5 105.8 L1205.0 105.2 L1207.5 104.4 L1210.0 103.3 L1212.5 103.4 L1215.0 104.9 L1217.5 105.0 L1220.0 105.6 L1222.5 104.7 L1225.0 106.3 L1227.5 106.3 L1230.0 106.5 L1232.5 104.7 L1235.0 104.1 L1237.5 104.3 L1240.0 104.5 L1242.5 104.5 L1245.0 103.4 L1247.5 104.6 L1250.0 105.2 L1252.5 106.9 L1255.0 105.8 L1257.5 105.7 L1260.0 105.2 L1262.5 105.8 L1265.0 105.3 L1267.5 103.9 L1270.0 103.5" stroke="#8E8E93" stroke-width="2" fill="none" stroke-linejoin="round"></path>
+<path d="M0.0 168.9 L2.5 168.1 L5.0 167.5 L7.5 166.2 L10.0 166.5 L12.5 167.8 L15.0 168.1 L17.5 168.5 L20.0 167.7 L22.5 169.3 L25.0 169.3 L27.5 169.6 L30.0 167.6 L32.5 167.2 L35.0 167.1 L37.5 167.6 L40.0 167.3 L42.5 166.5 L45.0 167.5 L47.5 168.3 L50.0 169.9 L52.5 168.7 L55.0 168.7 L57.5 168.1 L60.0 168.9 L62.5 168.1 L65.0 167.0 L67.5 166.3 L70.0 166.6 L72.5 168.2 L75.0 167.9 L77.5 168.3 L80.0 167.8 L82.5 169.5 L85.0 169.4 L87.5 169.2 L90.0 167.5 L92.5 167.1 L95.0 167.6 L97.5 167.4 L100.0 167.3 L102.5 166.3 L105.0 167.8 L107.5 168.5 L110.0 169.8 L112.5 168.5 L115.0 168.6 L117.5 168.5 L120.0 169.1 L122.5 169.6 L125.0 171.9 L127.5 176.9 L130.0 176.0 L132.5 168.3 L135.0 157.0 L137.5 154.1 L140.0 159.1 L142.5 168.3 L145.0 172.4 L147.5 171.7 L150.0 169.0 L152.5 167.5 L155.0 168.0 L157.5 167.2 L160.0 167.1 L162.5 166.2 L165.0 168.1 L167.5 168.7 L170.0 169.5 L172.5 168.5 L175.0 168.4 L177.5 168.9 L180.0 168.7 L182.5 168.0 L185.0 166.2 L187.5 166.8 L190.0 167.0 L192.5 168.4 L195.0 167.5 L197.5 168.0 L200.0 168.4 L202.5 169.7 L205.0 169.6 L207.5 168.2 L210.0 167.7 L212.5 167.2 L215.0 168.2 L217.5 166.9 L220.0 166.9 L222.5 166.4 L225.0 168.3 L227.5 169.0 L230.0 169.1 L232.5 168.5 L235.0 168.4 L237.5 169.3 L240.0 168.4 L242.5 167.9 L245.0 166.0 L247.5 167.0 L250.0 167.2 L252.5 168.2 L255.0 167.4 L257.5 167.8 L260.0 168.9 L262.5 169.6 L265.0 169.6 L267.5 167.8 L270.0 167.9 L272.5 167.3 L275.0 168.2 L277.5 166.7 L280.0 166.7 L282.5 166.7 L285.0 168.4 L287.5 169.1 L290.0 168.7 L292.5 168.6 L295.0 168.4 L297.5 169.6 L300.0 168.2 L302.5 167.6 L305.0 166.1 L307.5 167.2 L310.0 167.5 L312.5 167.8 L315.0 167.4 L317.5 167.8 L320.0 169.4 L322.5 169.5 L325.0 169.5 L327.5 167.6 L330.0 168.0 L332.5 167.6 L335.0 168.0 L337.5 166.6 L340.0 166.4 L342.5 167.2 L345.0 168.4 L347.5 169.2 L350.0 168.3 L352.5 168.8 L355.0 168.6 L357.5 169.7 L360.0 168.0 L362.5 167.3 L365.0 166.3 L367.5 167.3 L370.0 167.9 L372.5 168.9 L375.0 172.9 L377.5 178.2 L380.0 179.1 L382.5 169.2 L385.0 158.5 L387.5 153.4 L390.0 159.2 L392.5 166.5 L395.0 170.5 L397.5 169.4 L400.0 167.7 L402.5 168.1 L405.0 168.5 L407.5 169.2 L410.0 168.0 L412.5 168.9 L415.0 168.9 L417.5 169.6 L420.0 167.8 L422.5 166.9 L425.0 166.7 L427.5 167.3 L430.0 167.8 L432.5 167.0 L435.0 167.7 L437.5 168.0 L440.0 170.0 L442.5 169.2 L445.0 168.9 L447.5 167.6 L450.0 168.2 L452.5 168.1 L455.0 167.2 L457.5 166.5 L460.0 166.2 L462.5 168.1 L465.0 168.3 L467.5 169.0 L470.0 167.9 L472.5 169.1 L475.0 169.2 L477.5 169.3 L480.0 167.7 L482.5 166.7 L485.0 167.1 L487.5 167.3 L490.0 167.8 L492.5 166.7 L495.0 167.8 L497.5 168.3 L500.0 170.0 L502.5 169.1 L505.0 168.5 L507.5 167.9 L510.0 168.2 L512.5 168.3 L515.0 166.7 L517.5 166.6 L520.0 166.4 L522.5 168.4 L525.0 168.2 L527.5 168.7 L530.0 168.0 L532.5 169.2 L535.0 169.5 L537.5 168.8 L540.0 167.6 L542.5 166.5 L545.0 167.5 L547.5 167.2 L550.0 167.7 L552.5 166.5 L555.0 167.9 L557.5 168.7 L560.0 169.8 L562.5 169.0 L565.0 168.2 L567.5 168.3 L570.0 168.2 L572.5 168.3 L575.0 166.4 L577.5 166.6 L580.0 166.6 L582.5 168.5 L585.0 168.2 L587.5 168.3 L590.0 168.3 L592.5 169.2 L595.0 169.7 L597.5 168.4 L600.0 167.6 L602.5 166.5 L605.0 167.8 L607.5 167.2 L610.0 167.4 L612.5 166.6 L615.0 168.0 L617.5 169.1 L620.0 169.7 L622.5 170.4 L625.0 173.4 L627.5 179.1 L630.0 177.5 L632.5 168.0 L635.0 155.4 L637.5 152.6 L640.0 158.1 L642.5 167.1 L645.0 171.0 L647.5 170.9 L650.0 170.1 L652.5 169.7 L655.0 169.9 L657.5 168.0 L660.0 167.6 L662.5 166.7 L665.0 167.9 L667.5 167.1 L670.0 167.0 L672.5 166.8 L675.0 168.1 L677.5 169.5 L680.0 169.1 L682.5 168.9 L685.0 167.9 L687.5 169.0 L690.0 168.1 L692.5 167.8 L695.0 166.0 L697.5 166.7 L700.0 167.5 L702.5 168.2 L705.0 168.1 L707.5 167.8 L710.0 169.1 L712.5 169.3 L715.0 169.7 L717.5 167.6 L720.0 167.5 L722.5 167.0 L725.0 167.9 L727.5 167.1 L730.0 166.6 L732.5 167.1 L735.0 168.2 L737.5 169.7 L740.0 168.8 L742.5 168.8 L745.0 168.0 L747.5 169.2 L750.0 168.1 L752.5 167.4 L755.0 166.1 L757.5 166.8 L760.0 167.9 L762.5 167.9 L765.0 168.1 L767.5 167.7 L770.0 169.5 L772.5 169.4 L775.0 169.5 L777.5 167.5 L780.0 167.5 L782.5 167.4 L785.0 167.7 L787.5 167.0 L790.0 166.3 L792.5 167.6 L795.0 168.4 L797.5 169.7 L800.0 168.5 L802.5 168.8 L805.0 168.3 L807.5 169.2 L810.0 168.1 L812.5 166.9 L815.0 166.4 L817.5 166.8 L820.0 168.2 L822.5 167.6 L825.0 168.1 L827.5 167.8 L830.0 169.7 L832.5 169.4 L835.0 169.1 L837.5 167.5 L840.0 167.5 L842.5 167.8 L845.0 167.4 L847.5 167.0 L850.0 166.2 L852.5 167.9 L855.0 168.5 L857.5 169.6 L860.0 168.3 L862.5 168.7 L865.0 168.7 L867.5 169.1 L870.0 168.2 L872.5 168.0 L875.0 172.1 L877.5 177.3 L880.0 177.6 L882.5 167.2 L885.0 157.3 L887.5 154.0 L890.0 160.9 L892.5 168.1 L895.0 171.4 L897.5 170.6 L900.0 168.9 L902.5 168.5 L905.0 167.1 L907.5 166.9 L910.0 166.2 L912.5 168.3 L915.0 168.6 L917.5 169.3 L920.0 168.3 L922.5 168.7 L925.0 169.2 L927.5 168.8 L930.0 167.9 L932.5 166.2 L935.0 167.0 L937.5 167.1 L940.0 168.2 L942.5 167.1 L945.0 167.9 L947.5 168.5 L950.0 169.8 L952.5 169.5 L955.0 168.1 L957.5 167.9 L960.0 167.5 L962.5 168.3 L965.0 166.7 L967.5 166.7 L970.0 166.4 L972.5 168.4 L975.0 168.8 L977.5 168.8 L980.0 168.4 L982.5 168.7 L985.0 169.5 L987.5 168.5 L990.0 167.7 L992.5 166.1 L995.0 167.3 L997.5 167.3 L1000.0 167.9 L1002.5 167.1 L1005.0 167.9 L1007.5 169.0 L1010.0 169.7 L1012.5 169.4 L1015.0 167.8 L1017.5 168.1 L1020.0 167.7 L1022.5 168.2 L1025.0 166.5 L1027.5 166.6 L1030.0 166.8 L1032.5 168.5 L1035.0 168.9 L1037.5 168.4 L1040.0 168.6 L1042.5 168.7 L1045.0 169.7 L1047.5 168.1 L1050.0 167.5 L1052.5 166.2 L1055.0 167.5 L1057.5 167.4 L1060.0 167.5 L1062.5 167.2 L1065.0 167.9 L1067.5 169.5 L1070.0 169.4 L1072.5 169.3 L1075.0 167.6 L1077.5 168.4 L1080.0 167.8 L1082.5 168.0 L1085.0 166.3 L1087.5 166.4 L1090.0 167.3 L1092.5 168.4 L1095.0 168.9 L1097.5 168.0 L1100.0 168.9 L1102.5 168.9 L1105.0 169.8 L1107.5 167.9 L1110.0 167.3 L1112.5 166.5 L1115.0 167.5 L1117.5 167.6 L1120.0 167.3 L1122.5 168.8 L1125.0 173.4 L1127.5 180.2 L1130.0 178.5 L1132.5 168.9 L1135.0 156.9 L1137.5 154.4 L1140.0 159.0 L1142.5 166.2 L1145.0 169.2 L1147.5 169.3 L1150.0 169.3 L1152.5 168.7 L1155.0 168.9 L1157.5 167.8 L1160.0 169.1 L1162.5 169.1 L1165.0 169.6 L1167.5 167.7 L1170.0 167.0 L1172.5 166.9 L1175.0 167.5 L1177.5 167.6 L1180.0 166.7 L1182.5 167.6 L1185.0 168.2 L1187.5 170.0 L1190.0 169.0 L1192.5 168.8 L1195.0 167.8 L1197.5 168.6 L1200.0 168.2 L1202.5 167.1 L1205.0 166.4 L1207.5 166.4 L1210.0 168.2 L1212.5 168.1 L1215.0 168.7 L1217.5 167.8 L1220.0 169.3 L1222.5 169.4 L1225.0 169.2 L1227.5 167.6 L1230.0 166.8 L1232.5 167.4 L1235.0 167.4 L1237.5 167.6 L1240.0 166.4 L1242.5 167.8 L1245.0 168.4 L1247.5 169.9 L1250.0 168.8 L1252.5 168.5 L1255.0 168.2 L1257.5 168.6 L1260.0 168.2 L1262.5 166.6 L1265.0 166.5 L1267.5 166.5 L1270.0 168.4" stroke="#C2C2C8" stroke-width="2" fill="none" stroke-linejoin="round"></path>
+</g>
+</g>
+</svg>
+</figure>
+
+<ol style="list-style: none; margin: 0; padding: 0 8px; display: flex; align-items: flex-start; gap: 28px; flex-wrap: wrap">
+<li class="rv {{howOn}}" style="transition-delay: 0.6s; flex: 1 1 180px; display: flex; gap: 14px; align-items: center">
+<span aria-hidden="true" style="flex-shrink: 0; width: 64px; height: 64px; border-radius: 32px; background: #F4F4F5; display: flex; align-items: center; justify-content: center"><img src="/assets/af69ba48f0ec6da0605c60cb40256a34" alt="" style="width: 44px; height: 41px; display: block"></span>
+<span style="display: flex; flex-direction: column; gap: 4px"><b style="font-size: 17px; font-weight: 700">{{t.s1}}</b><span style="font-size: 15px; line-height: 1.45; color: #6B6B70">{{t.s1d}}</span></span>
+</li>
+<li class="rv {{howOn}}" style="transition-delay: 0.8s; flex: 1 1 180px; display: flex; gap: 14px; align-items: center">
+<span aria-hidden="true" style="flex-shrink: 0; width: 64px; height: 64px; border-radius: 32px; background: #F4F4F5; display: flex; align-items: center; justify-content: center"><svg width="38" height="26" viewBox="0 0 22 16" fill="none"><path d="M1 8h4.5l2.5-5.5 4 11 2.5-5.5H21" stroke="#E8305A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 4px"><b style="font-size: 17px; font-weight: 700">{{t.s2}}</b><span style="font-size: 15px; line-height: 1.45; color: #6B6B70">{{t.s2d}}</span></span>
+</li>
+<li class="rv {{howOn}}" style="transition-delay: 1s; flex: 1 1 180px; display: flex; gap: 14px; align-items: center">
+<span aria-hidden="true" style="flex-shrink: 0; width: 64px; height: 64px; border-radius: 32px; background: #F4F4F5; display: flex; align-items: center; justify-content: center"><img class="pp-beat" src="/assets/773846be9f32c64a1cddf5a673c221c8" alt="" style="width: 36px; height: 31px; display: block"></span>
+<span style="display: flex; flex-direction: column; gap: 4px"><b style="font-size: 17px; font-weight: 700">{{t.s3}}</b><span style="font-size: 15px; line-height: 1.45; color: #6B6B70">{{t.s3d}}</span></span>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<section id="iphone" ref="{{setPhone}}" style="max-width: 1200px; margin: 0 auto; padding: {{secPad}}px 32px {{secPadHalf}}px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 64px; align-items: center">
+<div class="rv {{phoneOn}}" style="display: flex; flex-direction: column; gap: 20px; align-items: flex-start">
+<span style="display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px; background: #F4F4F5; font-size: 15px; font-weight: 600; color: #3A3A40">
+<svg width="14" height="20" viewBox="0 0 14 20" fill="none" aria-hidden="true"><rect x="1.2" y="1" width="11.6" height="18" rx="3" stroke="#E8305A" stroke-width="2"></rect><rect x="5" y="3.2" width="4" height="1.6" rx="0.8" fill="#E8305A"></rect></svg>
+iPhone
+</span>
+<h2 style="margin: 0; font-size: 56px; line-height: 1.05; font-weight: 800; letter-spacing: -0.04em">{{t.phH1}}<br><span style="color: #E8305A">{{t.phH2}}</span></h2>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #4A4A50; max-width: 460px">{{t.phSub}}</p>
+<ul style="list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px">
+<li style="display: flex; align-items: center; gap: 14px; font-size: 17px"><span aria-hidden="true" style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 22px; background: #F4F4F5; display: flex; align-items: center; justify-content: center"><svg width="20" height="22" viewBox="0 0 20 22" fill="none"><path d="M8 11V3.5a2 2 0 1 1 4 0V10l4.2.9a2.4 2.4 0 0 1 1.9 2.6l-.6 5A3 3 0 0 1 14.5 21H9.8a3 3 0 0 1-2.4-1.2L3.6 15a1.9 1.9 0 0 1 2.9-2.4L8 14" stroke="#E8305A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>{{t.ph1}}</li>
+<li style="display: flex; align-items: center; gap: 14px; font-size: 17px"><span aria-hidden="true" style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 22px; background: #F4F4F5; display: flex; align-items: center; justify-content: center"><img src="/assets/773846be9f32c64a1cddf5a673c221c8" alt="" style="width: 20px; height: 17px; display: block"></span>{{t.ph2}}</li>
+<li style="display: flex; align-items: center; gap: 14px; font-size: 17px"><span aria-hidden="true" style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 22px; background: #F4F4F5; display: flex; align-items: center; justify-content: center"><img src="/assets/7cbd241200319a4a191a5e34bd124f90" alt="" style="width: 22px; height: 22px; display: block"></span>{{t.ph3}}</li>
+</ul>
+</div>
+<div class="rv {{phoneOn}}" style="transition-delay: 0.2s; display: flex; flex-direction: column; align-items: center; gap: 22px">
+<div style="position: relative; width: 340px; height: 712px">
+<div aria-hidden="true" style="position: absolute; left: 30px; right: 30px; bottom: -18px; height: 30px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,0.22), rgba(0,0,0,0))"></div>
+<button onPointerDown="{{onPhoneTap}}" aria-label="{{t.phAria}}" style="position: absolute; inset: 0; padding: 11px; box-sizing: border-box; border: none; border-radius: 62px; background: linear-gradient(145deg, #E9E9EC 0%, #B9B9BF 22%, #F4F4F6 48%, #A7A7AE 76%, #DADADF 100%); box-shadow: 0 30px 60px -20px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.18); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent">
+<span style="position: relative; display: block; width: 318px; height: 690px; border-radius: 52px; overflow: hidden; background: #000000; box-shadow: 0 0 0 2px #0A0A0A">
+<span style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; transform: scale(0.81538); transform-origin: 0 0; display: block"><dc-import name="iPhoneUI" value="{{phoneBpm}}" count="{{phoneCount}}" time="{{clock}}" hint-size="390px,844px"></dc-import></span>
+<span aria-hidden="true" style="position: absolute; left: 50%; top: 9px; width: 100px; height: 29px; margin-left: -50px; border-radius: 15px; background: #000000"></span>
+<span aria-hidden="true" class="{{ripA}}" style="position: absolute; left: {{ripX}}px; top: {{ripY}}px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,0.32), rgba(255,255,255,0)); opacity: 0; pointer-events: none"></span>
+<span aria-hidden="true" style="position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(160deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 30%)"></span>
+</span>
+</button>
+</div>
+<p style="margin: 0; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: #F2F2F4; font-size: 14px; font-weight: 600; color: #3A3A40">{{t.phHint}}</p>
+</div>
+</section>
+
+<section id="species" ref="{{setWrist}}" style="max-width: 1200px; margin: 0 auto; padding: {{secPad}}px 32px {{secPadHalf}}px; display: flex; flex-direction: column; gap: 56px">
+<div class="rv {{wristOn}}" style="text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center">
+<span style="display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px; background: #F4F4F5; font-size: 15px; font-weight: 600; color: #3A3A40">
+<svg width="18" height="20" viewBox="0 0 18 20" fill="none" aria-hidden="true"><rect x="1.5" y="3" width="15" height="15.5" rx="3" stroke="#E8305A" stroke-width="2"></rect><path d="M6 1.5h6M5.5 9h7M5.5 13h4.5" stroke="#E8305A" stroke-width="2" stroke-linecap="round"></path></svg>
+{{t.refPill}}
+</span>
+<h2 style="margin: 0; font-size: 56px; line-height: 1.05; font-weight: 800; letter-spacing: -0.04em">{{t.refH1}}<br><span style="color: #E8305A">{{t.refH2}}</span></h2>
+<p style="margin: 0; font-size: 20px; color: #4A4A50">{{t.refSub}}</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr)); gap: 20px">
+<article class="rv {{wristOn}}" style="transition-delay: 0.2s; display: flex; align-items: center; gap: 28px; padding: 0 36px 0 28px; height: 330px; margin-top: 48px; border-radius: 32px; background: #F4F4F5; overflow: visible">
+<div aria-hidden="true" style="position: relative; flex: 0 0 220px; width: 220px; height: 378px; align-self: flex-end">
+<img src="/assets/14c0efac4be02f3e5cf70474ffd36d94" alt="" style="width: 220px; height: 378px; display: block; filter: drop-shadow(0 18px 24px rgba(0,0,0,0.12))">
+<div style="position: absolute; left: 7.73%; top: 22.5%; width: 79.9%; height: 56.2%; overflow: hidden; border-radius: 16% / 13%; background: #000000">
+<div style="position: absolute; left: 50%; top: 50%; width: 416px; height: 496px; margin-left: -208px; margin-top: -248px; transform: scale(0.4225)"><dc-import name="WatchUI" view="species" time="{{clock}}" h24="{{h24}}" hint-size="416px,496px"></dc-import></div>
+</div>
+</div>
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 26px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><img src="/assets/7cbd241200319a4a191a5e34bd124f90" alt="" style="width: 28px; height: 28px; display: block"></span>
+<h3 style="margin: 6px 0 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em">{{t.c1h}}</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.45; color: #6B6B70">{{t.c1p}}</p>
+
+<button onClick="{{openSpecies}}" style="align-self: flex-start; margin-top: 14px; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 20px; border: none; border-radius: 999px; background: #FFFFFF; color: #141416; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer">{{t.c1btn}}<svg width="8" height="14" viewBox="0 0 8 14" fill="none" aria-hidden="true"><path d="M1.5 1.5L6.5 7l-5 5.5" stroke="#E8305A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+</div>
+</article>
+<article class="rv {{wristOn}}" style="transition-delay: 0.4s; display: flex; align-items: center; gap: 28px; padding: 0 36px 0 28px; height: 330px; margin-top: 48px; border-radius: 32px; background: #F4F4F5; overflow: visible">
+<div aria-hidden="true" style="position: relative; flex: 0 0 220px; width: 220px; height: 378px; align-self: flex-end">
+<img src="/assets/14c0efac4be02f3e5cf70474ffd36d94" alt="" style="width: 220px; height: 378px; display: block; filter: drop-shadow(0 18px 24px rgba(0,0,0,0.12))">
+<div style="position: absolute; left: 7.73%; top: 22.5%; width: 79.9%; height: 56.2%; overflow: hidden; border-radius: 16% / 13%; background: #000000">
+<div style="position: absolute; left: 50%; top: 50%; width: 416px; height: 496px; margin-left: -208px; margin-top: -248px; transform: scale(0.4225)"><dc-import name="WatchUI" view="history" time="{{clock}}" h24="{{h24}}" hint-size="416px,496px"></dc-import></div>
+</div>
+</div>
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 26px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="#E8305A" stroke-width="2.2"></circle><path d="M12 7v5.5l3.5 2" stroke="#E8305A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+<h3 style="margin: 6px 0 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em">{{t.c2h}}</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.45; color: #6B6B70">{{t.c2p}}</p>
+<p style="margin: 6px 0 0; font-size: 14px; color: #6B6B70; display: flex; align-items: center; gap: 8px"><svg width="14" height="20" viewBox="0 0 18 26" fill="none" aria-hidden="true"><rect x="1.5" y="1.5" width="15" height="23" rx="4" stroke="#6B6B70" stroke-width="2"></rect></svg>{{t.c2sync}}</p>
+</div>
+</article>
+</div>
+</section>
+
+<sc-if value="{{speciesOpen}}" hint-placeholder-val="{{ false }}">
+<div role="dialog" aria-modal="true" aria-label="Normal ranges by species" style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">
+<button aria-label="Close" onClick="{{closeSpecies}}" style="position: absolute; inset: 0; border: none; padding: 0; background: rgba(20,20,22,0.42); cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px)"></button>
+<div class="pp-pop" style="position: relative; width: 100%; max-width: 640px; max-height: 86vh; overflow: auto; box-sizing: border-box; padding: 32px; border-radius: 32px; background: #FFFFFF; box-shadow: 0 30px 80px rgba(0,0,0,0.25)">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.02em">{{t.mH}}</h3>
+<p style="margin: 0; font-size: 15px; color: #6B6B70">{{t.mP}}</p>
+</div>
+<button aria-label="Close" onClick="{{closeSpecies}}" style="flex-shrink: 0; width: 44px; height: 44px; border: none; border-radius: 22px; background: #F4F4F5; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="#141416" stroke-width="2.2" stroke-linecap="round"></path></svg></button>
+</div>
+<div role="table" aria-label="Normal ranges by species" style="margin-top: 22px; font-size: 16px">
+<div role="row" style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding-bottom: 10px; color: #6B6B70; font-size: 13px; font-weight: 600">
+<span role="columnheader">{{t.mC1}}</span>
+<span role="columnheader" style="display: inline-flex; align-items: center; gap: 6px"><img src="/assets/773846be9f32c64a1cddf5a673c221c8" alt="" style="width: 14px; height: 12px">{{t.mC2}}</span>
+<span role="columnheader" style="display: inline-flex; align-items: center; gap: 6px"><img src="/assets/5d17dd0a7a5ce27bec4ecf2e2afc98c1" alt="" style="width: 14px; height: 13px">{{t.mC3}}</span>
+</div>
+<sc-for list="{{speciesTable}}" as="row" hint-placeholder-count="9">
+<div role="row" style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid #EDEDF0; font-variant-numeric: tabular-nums">
+<span role="rowheader" style="display: inline-flex; align-items: center; gap: 12px; font-weight: 600"><span style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 20px; background: #F4F4F5; display: inline-flex; align-items: center; justify-content: center"><img src="{{row.icon}}" alt="" style="width: 24px; height: 22px; object-fit: contain"></span>{{row.name}}</span>
+<span role="cell"><b style="font-weight: 700">{{row.hr}}</b> <span style="color: #6B6B70">bpm</span></span>
+<span role="cell"><b style="font-weight: 700">{{row.rr}}</b> <span style="color: #6B6B70">br/min</span></span>
+</div>
+</sc-for>
+</div>
+<p style="margin: 18px 0 0; font-size: 13px; line-height: 1.5; color: #6B6B70">{{t.mNote}}</p>
+</div>
+</div>
+</sc-if>
+
+<section id="requirements" style="max-width: 1200px; margin: 0 auto; padding: {{secPadHalf}}px 32px">
+<div ref="{{setReq}}" class="rv {{reqOn}}" style="background: #F4F4F5; border-radius: 28px; padding: 26px 48px; display: flex; align-items: center; gap: 32px; flex-wrap: wrap; justify-content: space-around">
+<div style="display: flex; align-items: center; gap: 16px">
+<img src="/assets/7b076ffdded25cb81d507f218afafc1b" alt="" style="width: 52px; height: 52px; border-radius: 13px; display: block">
+<h2 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em">{{t.reqH}}</h2>
+</div>
+<div aria-hidden="true" style="width: 1px; height: 44px; background: #D8D8DD"></div>
+<div style="display: flex; align-items: center; gap: 14px">
+<img src="/assets/05934d9d7a8e189e010b268b017f1016" alt="" style="width: 40px; height: 44px; object-fit: contain; display: block">
+<span style="font-size: 17px; line-height: 1.3">Apple Watch<br>{{t.reqW}}</span>
+</div>
+<div style="display: flex; align-items: center; gap: 14px">
+<img src="/assets/1f38a6c1893c3296106da7d1bfc3de26" alt="" style="width: 44px; height: 44px; display: block">
+<span style="font-size: 17px; line-height: 1.3">watchOS 10<br>{{t.reqOs}}</span>
+</div>
+<div style="display: flex; align-items: center; gap: 14px">
+<svg width="28" height="44" viewBox="0 0 28 44" fill="none" aria-hidden="true"><rect x="2" y="1.5" width="24" height="41" rx="6" stroke="#141416" stroke-width="2.4"></rect><rect x="10" y="5" width="8" height="2.6" rx="1.3" fill="#141416"></rect></svg>
+<span style="font-size: 17px; line-height: 1.3">{{t.reqPhone}}<br>{{t.reqPhone2}}</span>
+</div>
+</div>
+</section>
+
+<section id="pricing" style="max-width: 1200px; margin: 0 auto; padding: {{secPadHalf}}px 32px {{secPad}}px; display: flex; flex-direction: column; align-items: center; gap: 28px; text-align: center">
+<div ref="{{setPrice}}" class="rv {{priceOn}}" style="display: flex; align-items: center; gap: 40px; flex-wrap: wrap; justify-content: center">
+<span style="font-size: 80px; font-weight: 800; letter-spacing: -0.04em; line-height: 1">{{t.price}}</span>
+<span aria-hidden="true" style="width: 1px; height: 64px; background: #D8D8DD"></span>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+<span style="font-size: 24px; font-weight: 700">{{t.pTry}}</span>
+<span style="font-size: 17px; font-weight: 500; padding: 4px 14px; border-radius: 999px; background: #F2F2F4; color: #3A3A40">{{t.pCounts}}</span>
+</div>
+</div>
+<a href="#pricing" class="rv {{priceOn}}" aria-label="Get PinchPulse on the App Store [App Store link]" style="transition-delay: 0.2s; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 420px; min-height: 60px; border-radius: 999px; background: #141416; color: #FFFFFF; font-size: 20px; font-weight: 600; text-decoration: none">{{t.pGet}}</a>
+<p class="rv {{priceOn}}" style="transition-delay: 0.35s; margin: 0; font-size: 14px; color: #5A5A60">{{t.pNote}}</p>
+</section>
+
+<footer style="max-width: 1200px; margin: 0 auto; padding: 32px 32px 48px; border-top: 1px solid #EDEDF0; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+<p style="margin: 0; font-size: 12px; line-height: 1.5; color: #5A5A60; max-width: 720px">{{t.foot}}</p>
+<nav aria-label="Footer" style="display: flex; gap: 20px">
+<a href="https://claude.ai/artifact/DH6FntR1PBLjnmiiufoUWE" target="_blank" rel="noopener" style="font-size: 12px; color: #5A5A60">{{t.fPriv}}</a>
+<a href="https://claude.ai/artifact/SaqyVwXK1QUcc37wSGDefC" target="_blank" rel="noopener" style="font-size: 12px; color: #5A5A60">{{t.fSup}}</a>
+<a href="mailto:chin101918@gmail.com" style="font-size: 12px; color: #5A5A60">chin101918@gmail.com</a>
+</nav>
+</footer>
+</div></template>
+<script src="/dc-lite.js"></script>
+<script>
+DC.define("WatchUI", {"view": "live", "value": "102", "count": "4", "activity": "Counting", "time": "12:55", "h24": "0"}, function (DCLogic) {
+
+class Component extends DCLogic {
+  renderVals() {
+    var P = this.props;
+    var view = P.view || 'live';
+    var idle = view === 'idle';
+    var isList = view === 'species' || view === 'history';
+    var B = '/assets/';
+    var speciesRows = [
+      { name: 'Dog', src: B + 'c41f37ce9978f69fe0ec6c948e797e16', selected: true },
+      { name: 'Cat', src: B + '0c932cc1a1d2333b6d5c47a971d19fb2', selected: false },
+      { name: 'Human', src: B + 'e85bc5fe4de3975c2e50ba093d4a7762', selected: false }
+    ];
+    var HEART = B + '773846be9f32c64a1cddf5a673c221c8', LUNG = B + '5d17dd0a7a5ce27bec4ecf2e2afc98c1';
+    // history times trail the live clock so the list always reads as "just now"
+    var ago = function (mins) {
+      var m = /^(\d{1,2}):(\d{2})$/.exec(String(P.time || '12:55'));
+      if (!m) return P.time || '';
+      var h24 = String(P.h24) === '1';
+      var t = (+m[1]) * 60 + (+m[2]);
+      if (!h24 && +m[1] === 12) t = 12 * 60 + (+m[2]);
+      t = ((t - mins) % 1440 + 1440) % 1440;
+      var hh = Math.floor(t / 60), mm = t % 60;
+      if (!h24) { hh = hh % 12; if (hh === 0) hh = 12; }
+      return (h24 && hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+    };
+    var historyRows = [
+      { icon: LUNG, value: '72', unit: 'br/min', time: ago(1), status: 'Tachypnea', color: '#FF5A4E', bar: '22%' },
+      { icon: HEART, value: '99', unit: 'bpm', time: ago(4), status: 'Normal', color: '#4CDA95', bar: '25%' },
+      { icon: HEART, value: '128', unit: 'bpm', time: ago(33), status: 'Normal', color: '#4CDA95', bar: '40%' }
+    ];
+    var value = (P.value === undefined || P.value === null) ? '102' : String(P.value);
+    var hasValue = !idle && value !== '';
+    var v = parseFloat(value);
+    var lo = 60, hi = 140;
+    var status = (!hasValue || isNaN(v)) ? null : (v > hi ? 'tachy' : (v < lo ? 'brady' : 'normal'));
+    var COLORS = { normal: '#4CDA95', tachy: '#FF6B57', brady: '#4FA6E9' };
+    var LABELS = { normal: 'Normal', tachy: 'Tachycardia', brady: 'Bradycardia' };
+    var pos = 0.5;
+    if (status) {
+      pos = 0.36 + (v - lo) / (hi - lo) * 0.28;
+      pos = Math.max(0.02, Math.min(0.98, pos));
+    }
+    return {
+      time: P.time || '12:55',
+      isMain: !isList, isList: isList, isSpecies: view === 'species', isHistory: view === 'history',
+      listTitle: view === 'species' ? 'Species' : 'History',
+      speciesRows: speciesRows, historyRows: historyRows,
+      isIdle: idle,
+      isLive: !idle,
+      hasValue: hasValue,
+      noValue: !hasValue,
+      value: value,
+      statusLabel: status ? LABELS[status] : '',
+      statusColor: status ? COLORS[status] : '#4CDA95',
+      markerLeft: (pos * 100).toFixed(1) + '%',
+      count: String(P.count === undefined || P.count === null ? '4' : P.count),
+      activity: P.activity || 'Counting'
+    };
+  }
+}
+
+return Component;
+});
+</script>
+<script>
+DC.define("iPhoneUI", {"value": 78, "count": 6, "time": "9:41"}, function (DCLogic) {
+
+class Component extends DCLogic {
+  renderVals() {
+    var P = this.props;
+    var GREEN = '#4DDB94', HIGH = '#FF6B57', LOW = '#4FA6E8';
+    var lo = 0, hi = 200, bandLo = 60, bandHi = 140;
+    var count = Math.round(Number(P.count === undefined ? 6 : P.count) || 0);
+    var raw = Number(P.value);
+    var v = (count >= 2 && isFinite(raw) && raw > 0) ? Math.round(raw) : null;
+    var frac = function (x) { return Math.max(0.02, Math.min(0.98, (x - lo) / (hi - lo))); };
+    var rad = function (f) { return (135 + f * 270) * Math.PI / 180; };
+    var fLo = frac(bandLo), fHi = frac(bandHi), fm = v === null ? 0 : frac(v);
+    var status = v === null ? null : (v < bandLo ? 'low' : (v > bandHi ? 'high' : 'normal'));
+    var C = 160, R = 136, LR = 156;
+    return {
+      time: P.time || '9:41',
+      greenDash: ((fHi - fLo) * 75) + ' 100',
+      greenOff: String(-fLo * 75),
+      hasValue: v !== null,
+      isReady: v === null,
+      markerX: String(C + R * Math.cos(rad(fm))),
+      markerY: String(C + R * Math.sin(rad(fm))),
+      markerColor: status === 'normal' ? GREEN : (status === 'high' ? HIGH : LOW),
+      loX: (C + LR * Math.cos(rad(fLo))) + 'px', loY: (C + LR * Math.sin(rad(fLo))) + 'px',
+      hiX: (C + LR * Math.cos(rad(fHi))) + 'px', hiY: (C + LR * Math.sin(rad(fHi))) + 'px',
+      statusLabel: status ? { normal: 'Normal', high: 'Tachycardia', low: 'Bradycardia' }[status] : '',
+      statusColor: status === 'normal' ? GREEN : (status === 'high' ? HIGH : LOW),
+      valueText: v === null ? '--' : String(v),
+      numberColor: v === null ? 'rgba(235,235,245,0.3)' : '#FFFFFF',
+      count: String(count),
+      countNoun: count === 1 ? 'beat' : 'beats'
+    };
+  }
+}
+
+return Component;
+});
+</script>
+<script>
+DC.define("Main", {"demoBpm": 100}, function (DCLogic) {
+
+var PP_T = {
+  en: {
+    navHow: 'How it works', navIphone: 'iPhone', navReq: 'Requirements', navTry: 'Try Free', langBtn: 'ไทย', langAria: 'เปลี่ยนเป็นภาษาไทย',
+    h1a: 'Listen.', h1b: 'Pinch.', h1c: 'Count.',
+    heroSub1: 'You do the listening.', heroSub2: 'We’ll handle the numbers.',
+    heroTry: 'Try Free (10 Counts)', heroBuy: 'Buy $1.99', badgeTop: 'Download on the',
+    hintDemo: 'Click anywhere to pinch along', hintUser: 'Your rhythm. Keep pinching',
+    p2L: 'One Hand to ', p2Lr: 'Count.', p2R: 'One Hand to ', p2Rr: 'Listen.',
+    p2Lcap: 'Pinch with every beat.', p2Rcap: 'Keep the stethoscope steady.', p2Sub: 'Everything works with just one hand.',
+    howPill: 'How It Works', howA: 'A Pinch', howB: 'a ', howBr: 'Beat.', howSub: 'Detects your pinch in real time using motion sensors.',
+    motion: 'Motion Signal', motionSub: 'Apple Watch accelerometer · live',
+    s1: '1. Pinch', s1d: 'A quick finger pinch.', s2: '2. Detect', s2d: 'Motion sensors catch it.', s3: '3. Count', s3d: 'One pinch, one beat.',
+    phH1: 'No Apple Watch?', phH2: 'Tap Along on iPhone.', phSub: 'Tap the screen once for every beat or breath. Same species ranges, same history, no watch needed.',
+    ph1: 'Tap anywhere on the screen', ph2: 'Heart rate and breathing rate', ph3: 'The same nine species ranges',
+    phHint: 'Tap the screen to try it', phAria: 'Tap once for each heartbeat to try the iPhone counter',
+    refPill: 'Built-in Reference', refH1: 'Forget the Chart.', refH2: 'It’s on Your Wrist.', refSub: 'Normal ranges and past readings, one glance away.',
+    c1h: 'Know What’s Normal', c1p: 'Nine species built in. Each reading is flagged normal, high or low.', c1btn: 'View Species',
+    c2h: 'Every Reading, Kept', c2p: 'Value, status and time, saved automatically.', c2sync: 'Synced to the iPhone app',
+    mH: 'Normal Ranges', mP: 'Built in for nine species. Edit them or add your own on iPhone.', mC1: 'Species', mC2: 'Heart rate', mC3: 'Breathing rate',
+    mNote: 'Readings outside these ranges are marked Tachy- or Brady-. Reference only, not a diagnosis.',
+    reqH: 'Requirements', reqW: 'Series 4 or later', reqOs: 'or later', reqPhone: 'or iPhone', reqPhone2: 'Tap mode',
+    price: '$1.99', pTry: 'Try Free', pCounts: '10 Counts', pGet: 'Get PinchPulse', pNote: 'One-time purchase · No subscription',
+    foot: 'PinchPulse counts the beats you pinch; it does not listen to or measure the patient and is not a medical device. © 2026 PinchPulse',
+    fPriv: 'Privacy Policy', fSup: 'Support',
+    sp: { Dog: 'Dog', Cat: 'Cat', Horse: 'Horse', Cattle: 'Cattle', Pig: 'Pig', Goat: 'Goat', Sheep: 'Sheep', Rabbit: 'Rabbit', Human: 'Human' }
+  },
+  th: {
+    navHow: 'วิธีใช้งาน', navIphone: 'iPhone', navReq: 'อุปกรณ์ที่รองรับ', navTry: 'ทดลองฟรี', langBtn: 'EN', langAria: 'Switch to English',
+    h1a: 'ฟัง', h1b: 'จีบนิ้ว', h1c: 'นับ',
+    heroSub1: 'คุณแค่ฟัง', heroSub2: 'เรื่องตัวเลขปล่อยให้เรา',
+    heroTry: 'ทดลองฟรี 10 ครั้ง', heroBuy: 'ซื้อ ฿49', badgeTop: 'ดาวน์โหลดได้จาก',
+    hintDemo: 'คลิกที่ไหนก็ได้ เพื่อจีบนิ้วตาม', hintUser: 'จังหวะของคุณ จีบต่อเลย',
+    p2L: 'มือหนึ่งไว้', p2Lr: 'นับ', p2R: 'อีกมือไว้', p2Rr: 'ฟัง',
+    p2Lcap: 'จีบนิ้วทุกครั้งที่ได้ยินเสียงหัวใจ', p2Rcap: 'ถือหูฟังให้นิ่งตามปกติ', p2Sub: 'ทุกอย่างทำได้ด้วยมือเดียว',
+    howPill: 'ทำงานอย่างไร', howA: 'จีบหนึ่งครั้ง', howB: '', howBr: 'หนึ่งจังหวะ', howSub: 'ตรวจจับการจีบนิ้วแบบเรียลไทม์ด้วยเซ็นเซอร์การเคลื่อนไหว',
+    motion: 'สัญญาณการเคลื่อนไหว', motionSub: 'เซ็นเซอร์ Apple Watch · สด',
+    s1: '1. จีบ', s1d: 'จีบนิ้วสั้นๆ หนึ่งครั้ง', s2: '2. ตรวจจับ', s2d: 'เซ็นเซอร์จับได้ทันที', s3: '3. นับ', s3d: 'จีบหนึ่งครั้ง นับหนึ่งจังหวะ',
+    phH1: 'ไม่มี Apple Watch?', phH2: 'แตะตามบน iPhone', phSub: 'แตะหน้าจอหนึ่งครั้งทุกจังหวะหัวใจหรือการหายใจ ใช้ค่าปกติและประวัติชุดเดียวกัน ไม่ต้องมีนาฬิกา',
+    ph1: 'แตะตรงไหนก็ได้บนหน้าจอ', ph2: 'นับได้ทั้งชีพจรและการหายใจ', ph3: 'ค่าปกติของสัตว์ 9 ชนิดชุดเดียวกัน',
+    phHint: 'ลองแตะที่หน้าจอดู', phAria: 'แตะหนึ่งครั้งต่อหนึ่งจังหวะเพื่อลองใช้ตัวนับบน iPhone',
+    refPill: 'ค่าอ้างอิงในตัว', refH1: 'ไม่ต้องเปิดตาราง', refH2: 'ค่าปกติอยู่บนข้อมือ', refSub: 'ค่าปกติและประวัติการวัด ดูได้ในพริบตา',
+    c1h: 'รู้ทันทีว่าปกติไหม', c1p: 'มีค่าปกติของสัตว์ 9 ชนิดในตัว ทุกค่าที่วัดบอกได้ว่าปกติ สูง หรือต่ำ', c1btn: 'ดูชนิดสัตว์',
+    c2h: 'เก็บทุกค่าที่วัด', c2p: 'บันทึกค่า สถานะ และเวลาให้อัตโนมัติ', c2sync: 'ซิงก์กับแอปบน iPhone',
+    mH: 'ค่าปกติ', mP: 'มีให้ในตัว 9 ชนิด แก้ไขหรือเพิ่มเองได้บน iPhone', mC1: 'ชนิดสัตว์', mC2: 'อัตราการเต้นหัวใจ', mC3: 'อัตราการหายใจ',
+    mNote: 'ค่าที่อยู่นอกช่วงจะแสดงเป็น Tachy- หรือ Brady- ใช้เป็นค่าอ้างอิงเท่านั้น ไม่ใช่การวินิจฉัย',
+    reqH: 'อุปกรณ์ที่รองรับ', reqW: 'Series 4 ขึ้นไป', reqOs: 'ขึ้นไป', reqPhone: 'หรือ iPhone', reqPhone2: 'โหมดแตะ',
+    price: '฿49', pTry: 'ทดลองฟรี', pCounts: '10 ครั้ง', pGet: 'ดาวน์โหลด PinchPulse', pNote: 'ซื้อครั้งเดียว · ไม่มีค่าสมาชิกรายเดือน',
+    foot: 'PinchPulse นับจังหวะตามที่คุณจีบนิ้ว ไม่ได้ฟังหรือวัดค่าจากผู้ป่วย และไม่ใช่อุปกรณ์การแพทย์ © 2026 PinchPulse',
+    fPriv: 'นโยบายความเป็นส่วนตัว', fSup: 'ช่วยเหลือ',
+    sp: { Dog: 'สุนัข', Cat: 'แมว', Horse: 'ม้า', Cattle: 'โค', Pig: 'สุกร', Goat: 'แพะ', Sheep: 'แกะ', Rabbit: 'กระต่าย', Human: 'คน' }
+  }
+};
+
+class Component extends DCLogic {
+  componentDidMount() {
+    var self = this;
+    this.N = 14;
+    this.p = 0; this.phase = 'rest'; this.t0 = 0; this.p0 = 0; this.closeDur = 60;
+    this.taps = []; this.count = 0; this.mode = 'demo';
+    this.lastUser = 0; this.nextDemo = performance.now() + 900;
+    this.tick = function (now) { self.step(now); self.raf = requestAnimationFrame(self.tick); };
+    this.raf = requestAnimationFrame(this.tick);
+    this.onScroll = function () {
+      if (self.scrollQueued) return;
+      self.scrollQueued = true;
+      requestAnimationFrame(function () { self.scrollQueued = false; self.measure(); });
+    };
+    window.addEventListener('scroll', this.onScroll, true);
+    window.addEventListener('resize', this.onScroll);
+    this.VQ = [[453.5, 364.8, 722.1, 368.2, 712.3, 604.2, 442.2, 601.5], [453.6, 362.5, 722.4, 367.0, 712.3, 601.7, 442.4, 600.6], [454.3, 359.4, 723.2, 365.9, 712.3, 599.9, 442.2, 599.0], [456.4, 356.0, 723.1, 363.1, 712.7, 597.9, 442.2, 596.0], [459.1, 356.0, 723.1, 361.7, 714.3, 595.9, 442.4, 592.2], [461.8, 354.3, 725.0, 359.3, 715.6, 592.3, 443.6, 588.1], [465.5, 350.0, 727.5, 356.3, 717.5, 588.0, 445.2, 584.2], [469.5, 345.6, 732.9, 353.7, 717.9, 583.4, 446.5, 580.8], [474.6, 341.0, 737.6, 348.1, 718.8, 577.8, 447.4, 578.1], [480.0, 337.2, 741.8, 343.3, 720.2, 573.3, 448.4, 571.5], [486.9, 329.0, 746.2, 337.1, 722.2, 567.3, 450.0, 563.9], [492.9, 324.3, 750.9, 333.2, 724.0, 562.0, 452.4, 554.7], [498.9, 317.9, 756.6, 325.9, 726.4, 555.0, 455.9, 548.0], [504.0, 315.2, 763.7, 320.6, 727.7, 547.2, 459.6, 542.6], [510.7, 309.0, 770.2, 314.9, 729.9, 539.9, 463.7, 536.0], [518.8, 302.8, 778.5, 311.6, 730.2, 533.1, 467.3, 528.5], [528.7, 295.5, 784.9, 305.6, 732.3, 528.2, 470.5, 519.3], [539.2, 287.4, 792.7, 299.8, 734.3, 522.0, 473.4, 511.3], [548.9, 280.6, 800.7, 294.1, 736.7, 515.4, 477.3, 504.4], [558.9, 274.0, 809.1, 288.2, 739.2, 508.1, 481.9, 497.8], [569.2, 268.1, 816.6, 283.6, 741.3, 501.4, 486.9, 491.6], [580.0, 262.2, 823.5, 277.5, 744.6, 494.4, 491.4, 487.3], [590.2, 257.0, 830.9, 271.8, 747.1, 488.8, 497.0, 481.7], [599.8, 252.5, 839.6, 264.6, 749.5, 485.1, 502.7, 477.4], [610.2, 248.6, 849.0, 259.6, 751.2, 481.0, 509.2, 471.0], [621.1, 244.7, 857.7, 254.4, 753.7, 476.6, 514.1, 467.8], [632.4, 240.9, 864.8, 250.5, 756.7, 472.3, 520.8, 462.7], [640.3, 238.1, 872.0, 246.3, 759.3, 469.3, 527.9, 460.0], [650.5, 235.0, 879.6, 243.3, 761.6, 467.3, 535.3, 456.7], [660.1, 233.2, 886.4, 240.3, 765.0, 465.7, 541.7, 455.0], [673.2, 231.2, 892.5, 238.6, 769.0, 464.9, 545.8, 453.7], [681.9, 230.0, 899.3, 236.7, 772.0, 465.2, 551.3, 452.4], [690.5, 229.3, 907.3, 235.7, 774.1, 465.9, 557.2, 451.9], [699.8, 229.0, 913.6, 235.0, 776.5, 467.4, 563.9, 451.6], [710.8, 228.8, 919.1, 235.2, 779.5, 469.2, 569.1, 451.9], [719.9, 228.8, 924.0, 235.4, 782.4, 470.8, 574.3, 453.1], [724.8, 229.8, 929.6, 235.7, 785.2, 473.0, 581.2, 455.5], [730.5, 230.5, 935.6, 236.5, 787.0, 475.6, 588.0, 458.2], [737.8, 230.5, 941.0, 238.2, 789.3, 478.7, 593.9, 460.9], [746.2, 230.3, 946.5, 240.0, 790.9, 481.6, 598.7, 463.1], [751.8, 231.3, 949.7, 241.2, 794.4, 484.6, 605.1, 465.7], [757.3, 233.0, 955.1, 242.0, 797.2, 487.4, 611.1, 467.8], [762.7, 234.8, 958.9, 242.3, 801.0, 490.2, 616.5, 470.3], [769.1, 236.2, 963.3, 243.4, 803.6, 492.6, 620.3, 473.1], [774.8, 237.2, 966.0, 244.9, 807.1, 494.7, 623.7, 476.8], [778.9, 239.3, 969.0, 246.5, 810.8, 497.1, 627.9, 479.5], [783.9, 240.4, 972.1, 248.3, 815.2, 499.0, 632.2, 482.2], [788.1, 241.5, 974.8, 249.9, 818.3, 503.3, 637.4, 484.1], [793.8, 241.3, 978.9, 252.1, 820.3, 507.1, 641.7, 486.4], [797.3, 242.4, 983.1, 253.7, 822.2, 511.5, 646.1, 489.3], [800.4, 245.0, 986.4, 254.7, 826.0, 513.9, 649.7, 492.6], [803.0, 247.1, 989.4, 255.7, 829.6, 516.6, 653.2, 495.7], [805.3, 248.8, 992.3, 256.7, 833.1, 519.5, 657.0, 498.5], [808.0, 249.3, 996.1, 258.0, 835.2, 522.9, 660.7, 500.7], [810.3, 250.3, 999.2, 260.1, 837.7, 527.1, 664.2, 503.8], [813.3, 251.6, 1001.4, 262.3, 840.7, 531.2, 666.3, 506.6], [815.9, 252.7, 1004.0, 264.8, 843.4, 534.8, 668.8, 510.0], [817.4, 254.2, 1006.5, 266.3, 846.2, 538.3, 672.4, 512.4], [818.8, 254.8, 1009.6, 268.5, 848.6, 541.2, 676.1, 515.5], [819.1, 256.4, 1010.9, 269.8, 852.6, 544.8, 679.1, 518.8], [819.8, 258.1, 1013.1, 270.8, 856.7, 547.3, 680.9, 523.3], [819.8, 260.1, 1014.5, 271.8, 860.8, 550.7, 682.9, 527.1], [820.9, 261.6, 1016.1, 273.1, 864.8, 553.8, 684.1, 530.5], [821.8, 262.6, 1016.4, 274.9, 869.0, 557.5, 685.5, 533.6], [822.3, 263.9, 1017.3, 276.4, 872.7, 561.2, 687.2, 536.4], [823.2, 264.8, 1018.9, 278.5, 876.4, 564.4, 688.7, 538.0], [822.9, 266.1, 1020.9, 279.9, 879.2, 568.8, 690.7, 540.6], [822.4, 267.6, 1022.7, 281.1, 883.0, 572.7, 692.5, 543.6], [820.9, 269.1, 1025.2, 282.2, 886.3, 577.2, 694.7, 547.4], [820.3, 270.3, 1027.1, 283.8, 890.4, 579.9, 695.8, 551.2], [820.0, 271.1, 1028.5, 285.2, 894.8, 583.3, 696.8, 555.0], [819.5, 271.6, 1030.0, 286.3, 897.9, 587.6, 698.0, 558.2], [818.7, 272.2, 1032.6, 286.5, 901.5, 591.4, 699.5, 561.2], [818.0, 272.2, 1034.4, 288.4, 905.1, 594.6, 700.6, 564.9], [816.9, 272.0, 1034.8, 289.9, 910.4, 597.2, 701.3, 570.0], [816.7, 271.2, 1035.9, 290.1, 915.1, 600.6, 702.1, 574.0], [815.7, 270.9, 1037.6, 288.4, 920.3, 604.4, 703.3, 577.8], [815.1, 270.3, 1039.5, 286.2, 924.7, 608.8, 704.5, 581.0], [813.8, 271.0, 1040.9, 285.8, 929.3, 613.0, 705.0, 584.5], [812.4, 271.6, 1042.3, 286.5, 933.5, 616.7, 706.2, 588.1], [810.4, 272.8, 1044.1, 288.2, 938.3, 619.6, 707.1, 592.5], [808.5, 274.0, 1044.8, 290.0, 943.3, 623.3, 708.5, 596.6], [806.4, 275.8, 1046.8, 291.2, 947.4, 628.5, 709.5, 599.3], [804.5, 277.8, 1049.5, 292.1, 950.7, 633.8, 710.9, 601.3], [802.4, 279.6, 1053.4, 293.2, 953.8, 638.2, 712.2, 604.9], [800.7, 280.8, 1054.4, 294.4, 958.7, 641.6, 713.4, 610.0], [798.5, 282.8, 1055.1, 294.9, 964.9, 645.4, 714.6, 614.7], [796.7, 284.2, 1055.1, 295.9, 971.1, 649.6, 715.7, 618.6], [794.8, 285.7, 1057.3, 297.2, 976.8, 653.2, 717.2, 622.0], [793.1, 286.3, 1059.4, 299.1, 982.1, 655.5, 719.0, 627.7], [791.6, 287.3, 1061.7, 301.0, 987.5, 657.5, 720.1, 633.3], [789.8, 289.5, 1063.7, 302.1, 992.3, 661.6, 721.9, 637.9], [788.9, 291.8, 1065.8, 302.6, 997.1, 666.7, 722.6, 640.5], [787.5, 293.9, 1068.6, 302.8, 1001.3, 673.0, 724.6, 642.7], [786.8, 294.1, 1071.0, 304.3, 1006.0, 677.2, 725.6, 645.9], [785.8, 295.4, 1072.6, 305.4, 1011.1, 680.9, 727.1, 650.3], [784.3, 296.9, 1074.1, 306.1, 1016.5, 683.9, 728.9, 655.3], [782.6, 299.5, 1076.7, 305.6, 1021.3, 686.1, 730.8, 660.8], [781.1, 300.5, 1079.4, 305.6, 1026.2, 689.1, 732.9, 665.7], [780.0, 302.1, 1080.8, 306.1, 1031.2, 691.3, 734.7, 670.3], [778.8, 303.4, 1081.5, 307.6, 1037.1, 695.0, 737.0, 673.8], [777.8, 304.4, 1083.2, 309.1, 1042.2, 698.6, 738.8, 677.2], [777.3, 305.4, 1085.6, 310.0, 1046.7, 702.6, 740.4, 680.6], [777.3, 306.2, 1088.6, 310.9, 1050.0, 705.9, 741.1, 683.2], [776.8, 307.1, 1092.0, 311.9, 1053.8, 707.8, 742.6, 688.1], [776.2, 307.9, 1093.9, 312.9, 1058.3, 710.6, 744.0, 691.8], [775.7, 308.1, 1095.8, 313.8, 1063.0, 713.7, 745.6, 696.2], [775.7, 309.2, 1097.5, 314.6, 1066.7, 718.3, 747.1, 697.3], [775.3, 310.5, 1100.4, 315.3, 1070.1, 721.7, 748.4, 699.9], [774.5, 311.2, 1103.5, 315.4, 1073.7, 723.7, 750.1, 704.3], [773.4, 312.8, 1105.5, 315.5, 1077.9, 724.8, 751.8, 710.4], [773.2, 313.4, 1107.1, 315.8, 1082.1, 726.4, 753.1, 715.0], [773.5, 314.6, 1108.0, 315.9, 1086.6, 728.5, 753.7, 717.4], [773.7, 314.5, 1109.9, 315.9, 1090.6, 731.4, 754.3, 719.3], [772.9, 314.5, 1112.0, 316.0, 1094.0, 734.2, 756.1, 722.0], [771.9, 314.5, 1115.0, 316.1, 1097.0, 736.8, 757.6, 725.3], [771.1, 314.5, 1116.5, 316.2, 1100.3, 739.2, 758.7, 729.3], [771.0, 314.5, 1117.0, 316.2, 1104.3, 741.2, 758.9, 732.9], [771.1, 314.4, 1117.7, 316.2, 1107.7, 743.6, 759.5, 735.6], [771.3, 314.4, 1120.1, 316.3, 1109.9, 746.5, 760.0, 737.4], [771.5, 314.5, 1123.8, 316.3, 1110.8, 748.0, 760.5, 739.6], [771.5, 314.4, 1125.9, 316.3, 1113.4, 748.6, 761.0, 742.1], [771.8, 314.2, 1127.1, 316.4, 1116.7, 749.9, 761.2, 743.7], [772.0, 315.5, 1128.2, 316.9, 1119.9, 752.5, 761.4, 746.0], [772.3, 316.6, 1129.8, 317.7, 1122.3, 755.5, 761.3, 748.2], [772.2, 317.9, 1130.2, 318.5, 1124.0, 755.8, 761.5, 750.3], [772.0, 317.5, 1129.7, 318.6, 1125.9, 756.9, 762.1, 751.9], [771.1, 317.7, 1130.0, 318.5, 1128.1, 757.9, 762.6, 753.3], [770.3, 317.3, 1132.7, 319.0, 1129.9, 761.1, 763.4, 754.7], [769.6, 316.5, 1135.3, 319.0, 1131.6, 764.0, 764.1, 755.3], [769.8, 315.9, 1138.0, 318.2, 1133.4, 765.4, 765.2, 757.4], [768.9, 316.4, 1140.2, 317.3, 1135.2, 764.8, 766.5, 760.0], [768.0, 317.6, 1142.4, 317.4, 1137.6, 764.6, 767.4, 762.1], [766.8, 319.2, 1143.6, 318.1, 1138.2, 766.2, 767.8, 762.9], [766.5, 319.7, 1142.5, 314.2, 1139.1, 767.4, 767.8, 763.6], [766.2, 320.0, 1144.0, 312.4, 1140.4, 768.3, 767.9, 765.0], [766.5, 317.6, 1145.1, 310.7, 1141.8, 768.2, 767.8, 766.1], [767.0, 315.8, 1148.0, 313.6, 1143.1, 769.3, 767.6, 767.2], [767.6, 312.6, 1147.7, 313.7, 1143.7, 771.6, 767.9, 768.7], [768.5, 310.8, 1149.5, 313.0, 1144.1, 775.9, 768.2, 770.6], [766.3, 310.1, 1152.3, 314.3, 1145.3, 778.3, 768.2, 772.7], [765.0, 308.9, 1155.4, 314.9, 1146.6, 778.3, 767.3, 773.5], [763.3, 309.1, 1156.8, 316.3, 1147.9, 777.6, 766.3, 774.5], [764.6, 309.1, 1156.6, 316.3, 1148.2, 777.0, 765.9, 774.7], [764.4, 310.8, 1156.5, 317.7, 1148.3, 776.3, 766.0, 775.1], [763.9, 311.5, 1157.5, 318.2, 1149.2, 775.3, 765.7, 774.5], [762.9, 311.2, 1158.7, 317.9, 1150.0, 775.4, 764.9, 774.4], [761.6, 307.9, 1159.7, 313.5, 1151.6, 775.2, 764.0, 774.6], [761.8, 307.1, 1157.4, 309.6, 1152.3, 775.3, 763.4, 775.3], [762.3, 306.7, 1155.1, 305.6, 1153.2, 776.1, 763.3, 776.1], [763.2, 308.6, 1152.9, 305.1, 1153.2, 777.5, 762.9, 776.4], [763.0, 307.6, 1153.2, 304.5, 1153.1, 779.0, 762.6, 777.0], [760.9, 306.4, 1155.1, 304.5, 1153.6, 779.2, 761.7, 777.8], [759.7, 307.7, 1157.6, 305.1, 1154.8, 782.3, 761.6, 779.7], [757.6, 309.1, 1159.4, 305.6, 1156.1, 784.7, 761.3, 781.1], [757.1, 310.6, 1160.9, 305.3, 1156.9, 787.4, 760.9, 782.5], [756.8, 310.1, 1160.2, 305.0, 1156.8, 786.2, 760.6, 782.5], [756.8, 309.8, 1160.1, 304.5, 1156.8, 785.0, 760.2, 782.5], [756.7, 309.4, 1161.0, 304.4, 1156.7, 784.0, 760.2, 782.4], [756.0, 309.2, 1163.7, 304.5, 1157.2, 783.5, 760.0, 782.6], [754.8, 308.8, 1164.5, 304.8, 1158.3, 783.2, 759.5, 782.7], [754.6, 308.5, 1163.1, 305.0, 1159.1, 783.0, 759.0, 783.2], [753.5, 308.5, 1162.0, 304.9, 1159.9, 783.2, 757.7, 783.6], [753.9, 308.6, 1163.4, 305.0, 1160.5, 783.0, 757.6, 784.3], [754.4, 306.5, 1164.5, 304.6, 1160.9, 783.5, 757.2, 784.4], [755.3, 303.0, 1165.0, 304.3, 1161.1, 784.8, 756.6, 784.8], [755.4, 299.8, 1166.1, 303.9, 1161.6, 785.5, 755.4, 785.5], [754.7, 298.5, 1167.3, 303.8, 1162.1, 785.8, 754.4, 785.7], [753.8, 298.6, 1168.2, 303.8, 1162.2, 785.1, 753.9, 785.7], [753.1, 298.6, 1167.9, 303.9, 1162.0, 789.0, 754.7, 787.1], [752.3, 298.5, 1167.7, 304.0, 1161.8, 792.4, 756.1, 789.4], [750.9, 298.5, 1168.1, 304.1, 1162.5, 795.9, 756.3, 791.5], [750.4, 298.6, 1169.0, 303.8, 1163.3, 795.8, 757.8, 791.8], [751.3, 298.8, 1170.1, 303.6, 1164.2, 796.1, 758.9, 791.8], [751.7, 298.7, 1170.3, 303.6, 1164.5, 796.5, 758.5, 791.8], [751.6, 298.6, 1171.3, 303.9, 1164.7, 796.5, 756.4, 791.8], [750.2, 298.5, 1171.5, 304.2, 1163.3, 796.3, 754.3, 791.8], [749.8, 298.0, 1174.4, 304.0, 1162.1, 795.1, 754.3, 792.2], [749.6, 297.3, 1176.2, 303.7, 1161.1, 794.2, 753.8, 791.9], [749.9, 296.6, 1177.2, 303.0, 1163.1, 792.2, 753.7, 792.6], [748.6, 296.4, 1176.7, 302.6, 1164.4, 791.8, 752.9, 791.9], [747.3, 296.5, 1174.9, 302.4, 1165.3, 791.8, 751.9, 792.4], [746.4, 295.6, 1175.1, 302.5, 1165.1, 792.5, 750.3, 792.0], [747.3, 294.6, 1174.1, 301.4, 1166.2, 792.5, 750.1, 792.6], [747.3, 293.6, 1174.5, 300.4, 1167.9, 792.1, 749.7, 792.7], [747.0, 293.5, 1173.7, 299.3, 1169.2, 792.7, 749.0, 792.4], [746.5, 293.6, 1173.3, 299.1, 1169.1, 793.1, 748.4, 792.2], [745.6, 293.7, 1174.5, 299.0, 1168.8, 793.9, 747.8, 792.0], [745.0, 293.7, 1174.3, 299.0, 1168.8, 793.4, 747.7, 792.0], [744.1, 293.6, 1175.2, 299.3, 1169.4, 792.9, 747.7, 792.6], [749.8, 294.5, 1173.4, 297.7, 1169.4, 792.7, 750.4, 797.3], [754.7, 294.0, 1172.9, 295.2, 1169.0, 793.5, 753.0, 802.0], [755.7, 292.4, 1171.8, 292.0, 1168.6, 795.3, 753.5, 804.1], [750.3, 290.2, 1171.4, 290.6, 1168.3, 796.7, 751.5, 802.7], [744.2, 289.6, 1173.3, 291.0, 1168.3, 798.1, 748.6, 801.5], [743.4, 290.4, 1175.6, 292.8, 1168.8, 799.0, 749.1, 802.5], [742.2, 291.2, 1178.3, 294.8, 1169.9, 799.9, 748.0, 803.6], [742.6, 290.8, 1178.7, 295.0, 1170.2, 800.8, 748.2, 804.3], [741.8, 290.4, 1179.2, 294.7, 1170.5, 800.5, 746.6, 804.3], [742.9, 290.1, 1178.5, 294.5, 1170.0, 800.3, 748.3, 803.8], [742.5, 289.7, 1179.5, 294.2, 1170.8, 800.1, 747.9, 803.5], [743.1, 289.0, 1178.6, 293.6, 1170.4, 800.8, 748.5, 803.7], [742.7, 287.9, 1178.8, 292.6, 1170.9, 801.2, 747.4, 803.7], [742.5, 288.0, 1178.4, 292.5, 1170.7, 801.3, 747.0, 803.6], [741.2, 288.3, 1179.2, 292.8, 1172.0, 801.8, 745.8, 803.4], [740.5, 289.1, 1179.2, 293.4, 1173.0, 801.1, 745.1, 802.6], [739.9, 288.7, 1178.9, 293.0, 1173.8, 801.0, 744.5, 801.8], [740.8, 288.4, 1178.5, 292.7, 1173.8, 799.7, 744.2, 800.4], [740.6, 288.1, 1178.8, 292.3, 1173.8, 799.5, 743.6, 799.6], [740.0, 287.7, 1179.3, 292.3, 1173.6, 799.2, 743.3, 799.7], [739.1, 286.9, 1180.4, 291.9, 1173.5, 799.5, 743.5, 800.3], [738.8, 285.9, 1181.6, 291.1, 1173.5, 799.7, 743.9, 801.1], [739.8, 285.9, 1182.9, 290.8, 1174.0, 799.7, 744.4, 800.9], [739.7, 286.4, 1184.6, 290.8, 1173.4, 800.2, 743.9, 800.9], [739.9, 287.2, 1184.5, 291.4, 1173.4, 802.3, 748.3, 802.7], [740.9, 286.8, 1183.1, 291.1, 1173.1, 803.0, 751.9, 804.6], [742.5, 286.5, 1181.3, 290.8, 1174.5, 804.4, 755.2, 806.8], [741.5, 286.2, 1180.8, 290.1, 1175.0, 803.9, 749.8, 807.2], [740.4, 286.7, 1181.2, 290.5, 1175.8, 804.8, 747.3, 807.5]];
+    this.loadFrames();
+    this.loadSteth();
+    this.phoneTaps = []; this.phoneCount = 0; this.phoneUser = -1e9; this.phoneNext = 0; this.ripN = 0;
+    var lang = 'en';
+    try {
+      var tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+      var langs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || '']);
+      if (tz === 'Asia/Bangkok' || /^th\b/i.test(langs[0] || '')) lang = 'th';
+    } catch (e) {}
+    this.setState({ lang: lang, now: Date.now() });
+    this.clockTimer = setInterval(function () { self.setState({ now: Date.now() }); }, 15000);
+    this.measure();
+    this.introTimer = setTimeout(function () { self.setState({ intro: true }); }, 80);
+  }
+  componentWillUnmount() {
+    if (this.raf) cancelAnimationFrame(this.raf);
+    window.removeEventListener('scroll', this.onScroll, true);
+    window.removeEventListener('resize', this.onScroll);
+    clearTimeout(this.introTimer);
+    clearInterval(this.clockTimer);
+    if (this.vLoop) cancelAnimationFrame(this.vLoop);
+    clearTimeout(this.vRetry);
+  }
+  measure() {
+    var s = this.state || {};
+    var vh = window.innerHeight || 800;
+    var upd = {};
+    if (this.wrapEl) {
+      var r = this.wrapEl.getBoundingClientRect();
+      var W = r.width;
+      var narrow = W < 860;
+      var H = Math.round(Math.max(narrow ? 680 : 620, Math.min(vh, 900)));
+      var doc = document.scrollingElement || document.documentElement;
+      var canScroll = doc.scrollHeight > vh + 40 || (document.body && document.body.scrollHeight > vh + 40);
+      var travel = Math.round(H * 3.2);
+      var p = 0;
+      if (canScroll) p = Math.max(0, Math.min(1, -r.top / travel));
+      if (Math.abs((s.p || 0) - p) > 0.0005 && (p * 3.2 < 1.7 || (s.p || 0) * 3.2 < 1.7)) upd.p = p;
+      var q = p * 3.2;
+      var vProg = canScroll ? Math.max(0, Math.min(1, (q - 1.45) / 1.25)) : 0;
+      this.vTarget = vProg;
+      var wantHow = vProg >= 0.42, wantDone = vProg >= 0.995, wantIn = q >= 1.45;
+      if (!!s.howOn !== wantHow) upd.howOn = wantHow;
+      if (!!s.vDone !== wantDone) { upd.vDone = wantDone; if (wantDone) { var me = this; setTimeout(function () { me.syncBeat(); }, 40); setTimeout(function () { me.syncBeat(); }, 400); } }
+      if (!!s.vIn !== wantIn) upd.vIn = wantIn;
+      this.ensureLoop();
+      if (this.sceneEl && this.howScreenEl) {
+        var sr = this.sceneEl.getBoundingClientRect(), hr = this.howScreenEl.getBoundingClientRect();
+        var box = [hr.left - sr.left, hr.top - sr.top, hr.width, hr.height].map(function (x) { return Math.round(x * 10) / 10; });
+        if (!s.howBox || s.howBox.join() !== box.join()) upd.howBox = box;
+      }
+      if (this.howInnerEl) {
+        var hh = this.howInnerEl.offsetHeight || 760, hw = this.howInnerEl.offsetWidth || 1200;
+        var hs = Math.min(1.22, (H - (narrow ? 32 : 96)) / hh, (W - 16) / hw);
+        var ht = Math.max(narrow ? 16 : 40, (H - hh * hs) / 2 + (narrow ? 0 : 14));
+        if (Math.abs((s.howS || 0) - hs) > 0.002) upd.howS = hs;
+        if (Math.abs((s.howTop || 0) - ht) > 0.5) upd.howTop = ht;
+      }
+      if (s.W !== W) upd.W = W;
+      if (s.H !== H) upd.H = H;
+      if (s.travel !== (canScroll ? travel : 0)) upd.travel = canScroll ? travel : 0;
+    }
+    var reveal = function (el) { return el ? el.getBoundingClientRect().top < vh * 0.82 : false; };
+    if (!s.reqOn && reveal(this.reqEl)) upd.reqOn = true;
+    if (!s.wristOn && reveal(this.wristEl)) upd.wristOn = true;
+    if (!s.priceOn && reveal(this.priceEl)) upd.priceOn = true;
+    if (!s.phoneOn && reveal(this.phoneEl)) upd.phoneOn = true;
+    if (this.phoneEl) {
+      var pr = this.phoneEl.getBoundingClientRect();
+      var pv = pr.top < vh * 0.9 && pr.bottom > vh * 0.1;
+      if (!!s.phoneVis !== pv) upd.phoneVis = pv;
+    }
+    for (var k in upd) { this.setState(upd); break; }
+  }
+  loadFrames() {
+    if (this.framesLoading) return;
+    this.framesLoading = true;
+    var self = this;
+    var SHEETS = ['dc69af62ce4bd4ba96e8034290c029a1', 'a825fb666c7035e441da3944a5808922', 'aced029c7fba95c55b2ec7079178f39c', 'be27815e3d42b4148f0759fdd2ccbee2', '3e0fbe097c803f33941b9034d73a9e72'];
+    this.frames = new Array(110);
+    SHEETS.forEach(function (id, si) {
+      var img = new Image();
+      img.decoding = 'async';
+      img.onload = function () {
+        for (var k = 0; k < 25; k++) {
+          var fi = si * 25 + k; if (fi >= 110) break;
+          var sx = (k % 5) * 768, sy = Math.floor(k / 5) * 432;
+          (function (fi, sx, sy) {
+            if (typeof createImageBitmap === 'function') {
+              createImageBitmap(img, sx, sy, 768, 432).then(function (bm) { self.frames[fi] = bm; self.vDrawn = -1; }, function () { self.frames[fi] = { img: img, sx: sx, sy: sy }; });
+            } else { self.frames[fi] = { img: img, sx: sx, sy: sy }; self.vDrawn = -1; }
+          })(fi, sx, sy);
+        }
+      };
+      img.src = '/assets/' + id;
+    });
+  }
+  loadSteth() {
+    if (this.stLoading) return;
+    this.stLoading = true;
+    var self = this;
+    var SH = ['aa4d466891e8d0b3ccea9487ead80a58', '14f44323791d55ee6c8a40a90379800b', '66767b13a546d36f27062820983610a0', '7393683cba6446bf2114eb963d701421'];
+    this.stFrames = new Array(76);
+    SH.forEach(function (id, si) {
+      var img = new Image();
+      img.decoding = 'async';
+      img.onload = function () {
+        for (var k = 0; k < 25; k++) {
+          var fi = si * 25 + k; if (fi >= 76) break;
+          var sx = (k % 5) * 640, sy = Math.floor(k / 5) * 309;
+          (function (fi, sx, sy) {
+            if (typeof createImageBitmap === 'function') {
+              createImageBitmap(img, sx, sy, 640, 309).then(function (bm) { self.stFrames[fi] = bm; self.vDrawn = -1; }, function () { self.stFrames[fi] = { img: img, sx: sx, sy: sy }; });
+            } else { self.stFrames[fi] = { img: img, sx: sx, sy: sy }; self.vDrawn = -1; }
+          })(fi, sx, sy);
+        }
+      };
+      img.src = '/assets/' + id;
+    });
+  }
+  drawSt(v) {
+    var cv = this.stCanvasEl, fr = this.stFrames;
+    if (!cv || !fr) return false;
+    var si = Math.max(0, Math.min(1, v / 0.43)) * 75, i0 = Math.min(75, Math.floor(si)), i1 = Math.min(75, i0 + 1), a = si - i0;
+    if (!fr[i0]) return false;
+    var ctx = this.stCtx || (this.stCtx = cv.getContext('2d'));
+    var draw = function (fo, alpha) {
+      ctx.globalAlpha = alpha;
+      if (fo.img) ctx.drawImage(fo.img, fo.sx, fo.sy, 640, 309, 0, 0, 640, 309); else ctx.drawImage(fo, 0, 0);
+    };
+    ctx.clearRect(0, 0, 640, 309);
+    draw(fr[i0], 1);
+    if (a > 0.01 && i1 !== i0 && fr[i1]) draw(fr[i1], a);
+    ctx.globalAlpha = 1;
+    // hand-off: static still while untouched, canvas once the slide starts
+    var live = v > 0.001;
+    if (this.thImgEl) this.thImgEl.style.visibility = live ? 'hidden' : 'visible';
+    if (cv.parentNode) cv.parentNode.style.visibility = live ? 'visible' : 'hidden';
+    return true;
+  }
+  syncBeat() {
+    // lock every beat-driven animation to the graph's phase so jolt, ticks and spike land together
+    var root = this.sceneEl;
+    if (!root || !root.getAnimations) return;
+    var list = root.getAnimations({ subtree: true }), ref = null;
+    list.forEach(function (a) { if (a.animationName === 'pp-scroll' && !ref) ref = a; });
+    if (!ref || ref.currentTime == null) return;
+    var t = ref.currentTime;
+    list.forEach(function (a) {
+      if (a !== ref && /^pp-(shakew|shake|tick|floor|ring|glow|beat)$/.test(a.animationName || '')) a.currentTime = t;
+    });
+  }
+  ensureLoop() {
+    if (this.vLoop) return;
+    var self = this;
+    var run = function () {
+      self.vLoop = null;
+      var target = self.vTarget || 0;
+      var cur = self.vCur === undefined ? target : self.vCur;
+      var d = target - cur;
+      cur = Math.abs(d) < 0.0004 ? target : cur + d * 0.2;
+      self.vCur = cur;
+      if (cur !== self.vDrawn) self.drawV(cur);
+      if (cur !== target || self.vDrawn !== cur) self.vLoop = requestAnimationFrame(run);
+    };
+    this.vLoop = requestAnimationFrame(run);
+  }
+  quadAt(f) {
+    var Q = this.VQ, i0 = Math.max(0, Math.min(218, Math.floor(f - 20))), i1 = Math.min(218, i0 + 1), a = Math.max(0, Math.min(1, f - 20 - i0));
+    var q0 = Q[i0], q1 = Q[i1], out = [];
+    for (var i = 0; i < 8; i++) out.push(q0[i] + (q1[i] - q0[i]) * a);
+    return out;
+  }
+  matrixFor(q) {
+    var src = [[-20, -22.5], [436, -22.5], [436, 518.5], [-20, 518.5]];
+    var A = [], B = [];
+    for (var i = 0; i < 4; i++) {
+      var x = src[i][0], y = src[i][1], u = q[i * 2], v = q[i * 2 + 1];
+      A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); B.push(u);
+      A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); B.push(v);
+    }
+    for (var c = 0; c < 8; c++) {
+      var piv = c; for (var r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+      var tA = A[c]; A[c] = A[piv]; A[piv] = tA; var tB = B[c]; B[c] = B[piv]; B[piv] = tB;
+      for (var r2 = 0; r2 < 8; r2++) if (r2 !== c) {
+        var m = A[r2][c] / A[c][c];
+        for (var k = c; k < 8; k++) A[r2][k] -= m * A[c][k];
+        B[r2] -= m * B[c];
+      }
+    }
+    var h = B.map(function (b, i) { return b / A[i][i]; });
+    return 'matrix3d(' + [h[0], h[3], 0, h[6], h[1], h[4], 0, h[7], 0, 0, 1, 0, h[2], h[5], 0, 1].map(function (n) { return +n.toFixed(6); }).join(',') + ')';
+  }
+  worldFor(v) {
+    var g = this.vGeom; if (!g) return '';
+    var ev = v * v * (3 - 2 * v);
+    var k = g.k0 * Math.pow(g.kE / g.k0, ev), x = g.x0 + (g.xE - g.x0) * ev, y = g.y0 + (g.yE - g.y0) * ev;
+    return 'translate3d(' + x.toFixed(2) + 'px, ' + y.toFixed(2) + 'px, 0) scale(' + k.toFixed(5) + ')';
+  }
+  drawV(v) {
+    var cvMask = function (el, v) {
+      // matches the hero sprite's edge fades at v=0, then opens up so the lifted watch is never clipped
+      if (!el) return false;
+      var f = Math.max(0, Math.min(1, v / 0.3)); f = f * f * (3 - 2 * f);
+      var a = (13.9 * (1 - f)).toFixed(2), b = (19.5 * (1 - f)).toFixed(2), c = (80.6 + 19.4 * f).toFixed(2), d = (88 + 12 * f).toFixed(2);
+      var m = 'linear-gradient(90deg, transparent 0%, #000 4%, #000 97%, transparent 100%), linear-gradient(180deg, transparent ' + a + '%, #000 ' + b + '%, #000 ' + c + '%, transparent ' + d + '%)';
+      if (el.__m !== m) { el.__m = m; el.style.webkitMaskImage = m; el.style.maskImage = m; el.style.webkitMaskComposite = 'source-in'; el.style.maskComposite = 'intersect'; }
+      return true;
+    };
+    var f = 20 + v * 218;
+    if (this.worldEl) this.worldEl.style.transform = this.worldFor(v);
+    if (this.vOverlayEl) this.vOverlayEl.style.transform = this.matrixFor(this.quadAt(f));
+    var stOk = this.drawSt(v);
+    if (cvMask(this.canvasEl, v)) {}
+    var cv = this.canvasEl, fr = this.frames;
+    if (cv && fr) {
+      var ctx = this.ctx || (this.ctx = cv.getContext('2d'));
+      var si = (f - 20) / 2, i0 = Math.max(0, Math.min(109, Math.floor(si))), i1 = Math.min(109, i0 + 1), a = si - i0;
+      var draw = function (fo, alpha) {
+        if (!fo) return false;
+        ctx.globalAlpha = alpha;
+        if (fo.img) ctx.drawImage(fo.img, fo.sx, fo.sy, 768, 432, 0, 0, 768, 432); else ctx.drawImage(fo, 0, 0);
+        return true;
+      };
+      if (fr[i0]) ctx.clearRect(0, 0, 768, 432);
+      if (draw(fr[i0], 1)) {
+        if (a > 0.01 && i1 !== i0) draw(fr[i1], a);
+        ctx.globalAlpha = 1;
+        this.vDrawn = stOk || v <= 0.001 ? v : -1;
+      } else { this.vDrawn = -1; }
+    } else { this.vDrawn = -1; }
+    if (this.vDrawn === -1 && !this.vRetry) {
+      var self = this; this.vRetry = setTimeout(function () { self.vRetry = null; self.ensureLoop(); }, 120);
+    }
+  }
+  beat(now) {
+    var last = this.taps.length ? this.taps[this.taps.length - 1] : -1e9;
+    if (now - last > 2500) { this.taps = []; this.count = 0; }
+    this.taps.push(now);
+    if (this.taps.length > 6) this.taps.shift();
+    this.count += 1;
+    this.p0 = this.p; this.phase = 'close'; this.t0 = now;
+    this.closeDur = Math.max(20, 70 * (1 - this.p0));
+  }
+  userBeat() {
+    var now = performance.now();
+    this.mode = 'user'; this.lastUser = now;
+    this.beat(now);
+    this.step(now);
+  }
+  phoneBeat(now, x, y) {
+    var last = this.phoneTaps.length ? this.phoneTaps[this.phoneTaps.length - 1] : -1e9;
+    if (now - last > 2500) { this.phoneTaps = []; this.phoneCount = 0; }
+    this.phoneTaps.push(now);
+    if (this.phoneTaps.length > 6) this.phoneTaps.shift();
+    this.phoneCount += 1;
+    var bpm = '';
+    if (this.phoneTaps.length >= 2) {
+      var iv = [];
+      for (var i = 1; i < this.phoneTaps.length; i++) iv.push(this.phoneTaps[i] - this.phoneTaps[i - 1]);
+      iv.sort(function (a, b) { return a - b; });
+      bpm = String(Math.round(60000 / iv[Math.floor(iv.length / 2)]));
+    }
+    this.ripN += 1;
+    this.setState({ phoneBpm: bpm, phoneCount: this.phoneCount, ripX: Math.round(x), ripY: Math.round(y), ripN: this.ripN });
+  }
+  step(now) {
+    var ps = this.state || {};
+    if (ps.phoneVis && now - this.phoneUser > 4000 && now >= this.phoneNext) {
+      // gentle demo at 78 bpm until the visitor takes over
+      this.phoneBeat(now, 159 + (Math.random() - 0.5) * 40, 360 + (Math.random() - 0.5) * 60);
+      this.phoneNext = this.phoneCount >= 12 ? now + 3200 : now + 769 + (Math.random() - 0.5) * 24;
+    }
+    if (ps.phoneCount && !ps.phoneVis && now - (this.phoneTaps[this.phoneTaps.length - 1] || 0) > 2600) {
+      this.phoneTaps = []; this.phoneCount = 0; this.setState({ phoneBpm: '', phoneCount: 0 });
+    }
+    var demoGap = 60000 / Math.max(40, Math.min(220, this.props.demoBpm || 100));
+    var scrolled = ((this.state && this.state.p) || 0) > 0.015;
+    if (scrolled && this.mode === 'demo') this.nextDemo = Math.max(this.nextDemo, now + 600);
+    if (this.mode === 'demo' && !scrolled && now >= this.nextDemo) {
+      this.beat(now);
+      this.nextDemo = this.count >= 16 ? now + 3200 : now + demoGap;
+    }
+    if (this.mode === 'user' && now - this.lastUser > 5000) {
+      this.mode = 'demo'; this.nextDemo = now + 300;
+    }
+    if (this.phase === 'close') {
+      var d = (now - this.t0) / this.closeDur;
+      if (d >= 1) { this.p = 1; this.phase = 'release'; this.t0 = now; }
+      else this.p = this.p0 + (1 - this.p0) * d * d;
+    } else if (this.phase === 'release') {
+      var r = (now - this.t0) / 420;
+      if (r >= 1) { this.p = 0; this.phase = 'rest'; }
+      else this.p = Math.pow(1 - r, 3);
+    }
+    var idx = Math.round(this.p * (this.N - 1));
+    var last = this.taps.length ? this.taps[this.taps.length - 1] : -1e9;
+    var live = now - last <= 2500;
+    var bpm = '';
+    if (live && this.taps.length >= 2) {
+      var iv = [];
+      for (var i = 1; i < this.taps.length; i++) iv.push(this.taps[i] - this.taps[i - 1]);
+      iv.sort(function (a, b) { return a - b; });
+      bpm = String(Math.round(60000 / iv[Math.floor(iv.length / 2)]));
+    }
+    var count = live ? this.count : 0;
+    var activity = live ? 'Counting' : 'Listening';
+    var s = this.state || {};
+    if (s.idx !== idx || s.bpm !== bpm || s.count !== count || s.activity !== activity || s.mode !== this.mode) {
+      this.setState({ idx: idx, bpm: bpm, count: count, activity: activity, mode: this.mode });
+    }
+  }
+  renderVals() {
+    var self = this;
+    var s = this.state || {};
+    var idx = s.idx || 0;
+    var col = idx % 3, row = Math.floor(idx / 3);
+    var MATS = ["matrix3d(0.515377,-0.00735565,0,-3.1838e-05,-0.0344016,0.382403,0,-4.48666e-05,0,0,1,0,472.587,231.033,0,1)", "matrix3d(0.517669,-0.00654886,0,-2.83461e-05,-0.0345438,0.382382,0,-4.59723e-05,0,0,1,0,472.454,231.032,0,1)", "matrix3d(0.515451,-0.0083363,0,-3.05122e-05,-0.0372718,0.379418,0,-5.19315e-05,0,0,1,0,472.319,231.413,0,1)", "matrix3d(0.509788,-0.0116629,0,-3.77839e-05,-0.0409689,0.375963,0,-5.82997e-05,0,0,1,0,472.353,231.895,0,1)", "matrix3d(0.50383,-0.0150234,0,-4.60831e-05,-0.0432109,0.373527,0,-6.16174e-05,0,0,1,0,472.378,232.378,0,1)", "matrix3d(0.503995,-0.0154297,0,-4.64089e-05,-0.0427502,0.373955,0,-6.04186e-05,0,0,1,0,472.294,232.557,0,1)", "matrix3d(0.510254,-0.0125677,0,-3.79735e-05,-0.0414119,0.375339,0,-5.78526e-05,0,0,1,0,472.223,232.512,0,1)", "matrix3d(0.515944,-0.00875964,0,-2.77145e-05,-0.0451912,0.372242,0,-6.59502e-05,0,0,1,0,472.195,232.367,0,1)", "matrix3d(0.520126,-0.0056237,0,-2.0548e-05,-0.0459083,0.371485,0,-6.78484e-05,0,0,1,0,472.127,232.177,0,1)", "matrix3d(0.519815,-0.00491337,0,-1.97362e-05,-0.0469437,0.36999,0,-7.0302e-05,0,0,1,0,472.076,232.127,0,1)", "matrix3d(0.518763,-0.0057549,0,-2.2227e-05,-0.0439154,0.37213,0,-6.41338e-05,0,0,1,0,472.025,232.193,0,1)", "matrix3d(0.518315,-0.0059593,0,-2.28265e-05,-0.0441498,0.371877,0,-6.44055e-05,0,0,1,0,472.04,232.21,0,1)", "matrix3d(0.516066,-0.00733187,0,-2.61313e-05,-0.0437464,0.371833,0,-6.35329e-05,0,0,1,0,472.009,232.361,0,1)", "matrix3d(0.514977,-0.00793565,0,-2.77064e-05,-0.0436652,0.37171,0,-6.32373e-05,0,0,1,0,472.002,232.421,0,1)"];
+
+    // ---- scroll scene ----
+    var lang = s.lang === 'th' ? 'th' : 'en';
+    var T = PP_T[lang];
+    var nowD = new Date(s.now || Date.now());
+    var h24 = lang === 'th';
+    var hr = nowD.getHours(), mi = nowD.getMinutes();
+    var clock = h24 ? ((hr < 10 ? '0' : '') + hr + ':' + (mi < 10 ? '0' : '') + mi) : (((hr % 12) || 12) + ':' + (mi < 10 ? '0' : '') + mi);
+    var W = s.W || 1440, H = s.H || 760, pAll = s.p || 0;
+    var q = pAll * 3.2;
+    var p = Math.min(1, q / 1.25);
+    var narrow = W < 860;
+    var sm = function (t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+    var mix = function (a, b, t) { return a + (b - a) * t; };
+    var t1 = sm((p - 0.05) / 0.60);   // hand travels to page-2 position, stethoscope slides in
+    var t2 = sm((p - 0.30) / 0.35);   // page-2 text rises in with the hands
+    var tLine = sm((p - 0.66) / 0.22); // red pointer lines draw down after the text
+    var tOut = sm(p / 0.16);          // hero copy leaves
+    var tCard = sm((p - 0.10) / 0.32);
+    var C = Math.max(0, (W - 1200) / 2);   // content gutter
+
+    var connTop, connLDot, connRDot, stW, stX, stY, thW, thX, thY, p2X, p2Y, p2LX, p2RX, p2RY, p2SubY, p2Size, heroL, heroT, heroW, h1Size;
+    var thH;
+    if (!narrow) {
+      stW = mix(W * 0.62, W * 0.54, t1);
+      var stH0 = W * 0.62 / 2.4;
+      var stHA = stW / 2.4;
+      thW = W * 0.56; thH = thW * 675 / 1400;
+      var sep = 0;
+      // page-2 balance: fingertips and chestpiece meet at the centre line
+      var midY = H * 0.63;
+      stX = mix(W * 0.38, W * 0.49 - 0.92 * stW, t1) - sep;
+      stY = mix(H * 0.5 - stH0 / 2 + 20, midY - 0.64 * stHA, t1);
+      thX = mix(W * 1.02, W * 0.51 - 0.042 * thW, t1) + sep;
+      thY = mix(H + 60, midY - 0.45 * thH, t1);
+      p2X = W * 0.5; p2Y = H * 0.07 + 36; p2RY = p2Y; p2Size = W < 1100 ? 32 : 38;
+      // headlines sit right above their own hand (final page-2 positions)
+      var stWf = W * 0.54, stHf = stWf / 2.4, thWf = W * 0.56, thHf = thWf * 675 / 1400;
+      p2LX = (W * 0.49 - 0.92 * stWf) + 0.60 * stWf;
+      p2RX = (W * 0.51 - 0.042 * thWf) + 0.36 * thWf;
+      var handLTop = midY - 0.64 * stHf + 0.30 * stHf, handRTop = midY - 0.45 * thHf + 0.22 * thHf;
+      p2SubY = H - H * 0.07 - 52;
+      connTop = p2Y + p2Size * 1.1 + 44; connLDot = handLTop; connRDot = handRTop;
+      heroL = C + 32; heroW = Math.min(440, W * 0.36); h1Size = W < 1100 ? 64 : 80;
+      heroT = H * 0.5 - (h1Size * 3 + 190) / 2;
+    } else {
+      stW = mix(W * 1.3, W * 1.05, t1);
+      var stHn = W * 1.3 / 2.4;
+      stX = mix(W * -0.22, W * -0.32, t1);
+      stY = mix(H - stHn - 60, H * 0.53 - (stW / 2.4) / 2, t1);
+      thW = W * 0.9; thH = thW * 675 / 1400;
+      thX = mix(W * 1.05, W * 0.22, t1);
+      thY = mix(H + 60, H * 0.80 - thH / 2, t1);
+      p2X = W * 0.5; p2Y = 28; p2LX = W * 0.5; p2RX = W * 0.5; p2RY = 150; p2SubY = H - 40; p2Size = 28; connTop = 0; connLDot = 0; connRDot = 0;
+      heroL = 24; heroW = W - 48; h1Size = 56; heroT = 16;
+    }
+    var stH = stW / 2.4;
+    var cardL = narrow ? 12 : C + 32, cardT = narrow ? 16 : H * 0.07;
+    var clipOpen = 1 - sm((q - 1.45) / 0.2);
+    var ins = function (v) { return (v * t1 * clipOpen).toFixed(1) + 'px'; };
+    var handsClip = 'none';   // arms run past the card; hands are true cut-outs so nothing tints them
+    var wrapH = s.travel ? H + s.travel : H;
+    // ---- page 2 -> page 3: watch-removal video, then How It Works ----
+    var out2 = sm((q - 1.45) / 0.2);
+    var vidO = q >= 1.45 ? 1 : 0;
+    var k0 = (W * 0.54) / 1920;
+    var stHf2 = (W * 0.54) / 2.4, midY2 = H * 0.63;
+    var x0 = W * 0.49 - 0.92 * W * 0.54, y0 = (midY2 - 0.64 * stHf2) - 150 * k0;
+    if (narrow) { k0 = (W * 1.05) / 1920; x0 = W * -0.32; y0 = H * 0.53 - (W * 1.05 / 2.4) / 2 - 150 * k0; }
+    var QE = [740.37, 286.74, 1181.25, 807.54];
+    var hb = s.howBox || [W * 0.2, H * 0.35, 240, 290];
+    var kE = ((hb[2] / (QE[2] - QE[0])) + (hb[3] / (QE[3] - QE[1]))) / 2;
+    var xE = hb[0] - QE[0] * kE, yE = hb[1] - QE[1] * kE;
+    this.vGeom = { k0: k0, x0: x0, y0: y0, kE: kE, xE: xE, yE: yE };
+    var vNow = this.vCur === undefined ? 0 : this.vCur;
+    var howO = s.howOn ? 1 : 0;
+
+    return {
+      setWrap: function (el) { self.wrapEl = el; },
+      setStage: function (el) { self.stageEl = el; },
+      setReq: function (el) { self.reqEl = el; },
+      setWrist: function (el) { self.wristEl = el; },
+      speciesOpen: !!s.speciesOpen,
+      openSpecies: function () { self.setState({ speciesOpen: true }); },
+      closeSpecies: function () { self.setState({ speciesOpen: false }); },
+      t: T, lang: lang, langCls: lang === 'th' ? 'pp-th' : '',
+      toggleLang: function () { self.setState({ lang: lang === 'th' ? 'en' : 'th' }); },
+      clock: clock, h24: h24 ? '1' : '0',
+      secPad: narrow ? 88 : 140, secPadHalf: narrow ? 48 : 72,
+      spFade: (24 + (4 - 24) * t1).toFixed(1),
+      howTop: Math.round(s.howTop || 40),
+      setPhone: function (el) { self.phoneEl = el; },
+      phoneOn: s.phoneOn || s.travel === 0 ? 'on' : '',
+      phoneBpm: s.phoneBpm === undefined ? '' : s.phoneBpm,
+      phoneCount: String(s.phoneCount || 0),
+      ripA: s.ripN ? (s.ripN % 2 ? 'pp-rip' : 'pp-rip2') : '',
+      ripX: s.ripX || 159, ripY: s.ripY || 360,
+      onPhoneTap: function (e) {
+        if (e && e.button !== undefined && e.button !== 0) return;
+        var now = performance.now();
+        self.phoneUser = now;
+        var x = 159, y = 360;
+        if (e && e.currentTarget && e.clientX !== undefined) {
+          var r = e.currentTarget.getBoundingClientRect();
+          var k = r.width / 340;
+          x = (e.clientX - r.left) / k - 11; y = (e.clientY - r.top) / k - 11;
+        }
+        self.phoneBeat(now, x, y);
+      },
+      speciesTable: [
+        { name: T.sp.Dog, icon: '/assets/e747ec948f165593a56ec0b96e8657d8', hr: '60–140', rr: '10–30' },
+        { name: T.sp.Cat, icon: '/assets/ae188ef28a1081831d0793c9cf42ac0f', hr: '140–220', rr: '20–30' },
+        { name: T.sp.Horse, icon: '/assets/584b26f0cc11758e3b40315a28f74b02', hr: '28–44', rr: '8–16' },
+        { name: T.sp.Cattle, icon: '/assets/a3a69e8662b196dde26158feb81efb2f', hr: '48–84', rr: '26–50' },
+        { name: T.sp.Pig, icon: '/assets/88a7a81b25d9bbf2824a6c420209384b', hr: '70–120', rr: '32–58' },
+        { name: T.sp.Goat, icon: '/assets/7f615787521b56515141dd22c521fb82', hr: '70–90', rr: '15–30' },
+        { name: T.sp.Sheep, icon: '/assets/24740e9c55b3566202991b8ac4bee5a2', hr: '70–90', rr: '16–34' },
+        { name: T.sp.Rabbit, icon: '/assets/839d57d492e9c38db011d8d9b708c254', hr: '180–300', rr: '30–60' },
+        { name: T.sp.Human, icon: '/assets/3e74d531d9709d95d6baeeba6c514164', hr: '60–100', rr: '12–20' }
+      ],
+      setPrice: function (el) { self.priceEl = el; },
+      introOn: s.intro ? 'on' : '',
+      howOn: s.howOn ? 'on' : '',
+      reqOn: s.reqOn || s.travel === 0 ? 'on' : '',
+      wristOn: s.wristOn || s.travel === 0 ? 'on' : '',
+      priceOn: s.priceOn || s.travel === 0 ? 'on' : '',
+      wrapH: Math.round(wrapH),
+      howAnchor: Math.round(H * 2.75),
+      setScene: function (el) { self.sceneEl = el; },
+      setThImg: function (el) { self.thImgEl = el; },
+      setStCanvas: function (el) { self.stCanvasEl = el; if (el) { self.stCtx = null; self.vDrawn = -1; self.ensureLoop(); } },
+      setCanvas: function (el) { self.canvasEl = el; if (el) { self.ctx = null; self.vDrawn = -1; self.ensureLoop(); } },
+      setWorld: function (el) { self.worldEl = el; },
+      setVOverlay: function (el) { self.vOverlayEl = el; },
+      setHowScreen: function (el) { self.howScreenEl = el; },
+      setHowInner: function (el) { self.howInnerEl = el; },
+      spriteO: q >= 1.45 ? 0 : 1, spriteVis: q >= 1.45 ? 'hidden' : 'visible',
+      vidO: vidO.toFixed(3), vidVis: vidO > 0.001 ? 'visible' : 'hidden',
+      vidMatrix: this.VQ ? this.matrixFor(this.quadAt(20 + vNow * 218)) : 'none', vidWorld: this.worldFor(vNow), vidUiO: s.vDone ? 1 : 0, vidShake: s.vDone ? 'pp-shakew' : '', howFxO: s.vDone ? 1 : 0, shakeA: (this.vGeom && this.vGeom.kE ? 5 / this.vGeom.kE : 10).toFixed(2), howFxVis: s.vDone ? 'visible' : 'hidden', vidStillO: s.vDone ? 1 : 0,
+      howO: howO, howPE: howO > 0.5 ? 'auto' : 'none', howVis: 'visible',
+      howWatchO: 0,
+      howS: (s.howS || 1).toFixed(4),
+      sceneH: H,
+      cardL: cardL, cardT: Math.round(cardT), cardO: (tCard * (1 - out2)).toFixed(3),
+      handsClip: handsClip,
+      stX: stX.toFixed(1), stY: stY.toFixed(1), stW: stW.toFixed(1), stH: stH.toFixed(1),
+      thX: thX.toFixed(1), thY: thY.toFixed(1), thW: thW.toFixed(1), thO: sm((p - 0.04) / 0.12).toFixed(3), thHpx: (thW * 675 / 1400).toFixed(1), thImgVis: (this.vCur || 0) > 0.001 ? 'hidden' : 'visible', stCvVis: (this.vCur || 0) > 0.001 ? 'visible' : 'hidden',
+      heroL: heroL, heroT: Math.round(heroT), heroW: Math.round(heroW), h1Size: h1Size,
+      heroO: (1 - tOut).toFixed(3), heroDX: (-60 * tOut).toFixed(1), heroPE: tOut > 0.5 ? 'none' : 'auto',
+      hintX: (stX + stW * 0.56).toFixed(1), hintY: (stY + stH + 4).toFixed(1),
+      hintVis: tOut > 0.95 ? 'hidden' : 'visible',
+      p2X: p2X.toFixed(1), p2Y: p2Y.toFixed(1), p2LX: p2LX.toFixed(1), p2RX: p2RX.toFixed(1), p2RY: p2RY.toFixed(1), p2SubY: p2SubY.toFixed(1), p2Size: p2Size,
+      connTop: connTop.toFixed(1), connLH: (Math.max(0, connLDot - connTop) * tLine).toFixed(1), connRH: (Math.max(0, connRDot - connTop) * tLine).toFixed(1), dotO: (narrow ? 0 : sm((tLine - 0.85) / 0.15) * (1 - out2)).toFixed(3), dotS: (0.4 + 0.6 * sm((tLine - 0.85) / 0.15)).toFixed(3), connLDot: connLDot.toFixed(1), connRDot: connRDot.toFixed(1), connO: (narrow || tLine <= 0 ? 0 : (1 - out2)).toFixed(3),
+      p2O: (t2 * (1 - out2)).toFixed(3), p2SubO: (sm((p - 0.42) / 0.30) * (1 - out2)).toFixed(3), p2DY: (36 * (1 - t2)).toFixed(1),
+      spritePos: (col * 50) + '% ' + (row * 25) + '%',
+      worldScale: (stW / 1920).toFixed(5),
+      uiMatrix: MATS[Math.max(0, Math.min(MATS.length - 1, idx))],
+      bpm: s.bpm === undefined ? '' : s.bpm,
+      count: String(s.count || 0),
+      activity: s.activity || 'Listening',
+      hint: s.mode === 'user' ? T.hintUser : T.hintDemo,
+      onHeroDown: function (e) {
+        if (e && e.button !== undefined && e.button !== 0) return;
+        var t = e && e.target;
+        if (t && t.closest && t.closest('a')) return;
+        self.userBeat();
+      },
+      onStageKey: function (e) {
+        if (e && e.detail === 0) self.userBeat();
+      }
+    };
+  }
+}
+
+return Component;
+});
+</script>
+<script>DC.mount('Main', document.getElementById('app'));</script>
+</body>
+</html>
