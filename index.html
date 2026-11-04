@@ -49,7 +49,7 @@ a{color:#141416}a:hover{color:#C81E47}
 @media (prefers-reduced-motion: reduce){.pp-pop{animation:none}}
 @media (prefers-reduced-motion: reduce){.pp-scroll,.pp-shake,.pp-shakew,.pp-ring,.pp-glow,.pp-beat,.pp-tick,.pp-floor{animation:none}.pp-tick{opacity:0}}
 </style>
-</head>
+<script>try{history.scrollRestoration="manual";if(location.hash)history.replaceState(null,"",location.pathname+location.search);}catch(e){}window.addEventListener("load",function(){var n=0,t=setInterval(function(){if(window.scrollY>0&&n<6)window.scrollTo(0,0);if(++n>6)clearInterval(t)},120)});</script></head>
 <body>
 <script>
 (function () {
@@ -545,8 +545,8 @@ iPhone
 <footer style="max-width: 1200px; margin: 0 auto; padding: 32px 32px 48px; border-top: 1px solid #EDEDF0; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap">
 <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #5A5A60; max-width: 720px">{{t.foot}}</p>
 <nav aria-label="Footer" style="display: flex; gap: 20px">
-<a href="https://claude.ai/artifact/DH6FntR1PBLjnmiiufoUWE" target="_blank" rel="noopener" style="font-size: 12px; color: #5A5A60">{{t.fPriv}}</a>
-<a href="https://claude.ai/artifact/SaqyVwXK1QUcc37wSGDefC" target="_blank" rel="noopener" style="font-size: 12px; color: #5A5A60">{{t.fSup}}</a>
+<a href="policy.html" style="font-size: 12px; color: #5A5A60">{{t.fPriv}}</a>
+<a href="help.html" style="font-size: 12px; color: #5A5A60">{{t.fSup}}</a>
 <a href="mailto:chin101918@gmail.com" style="font-size: 12px; color: #5A5A60">chin101918@gmail.com</a>
 </nav>
 </footer>
@@ -1038,6 +1038,9 @@ var PP_T = {
 class Component extends DCLogic {
   componentDidMount() {
     var self = this;
+    try { if (history.scrollRestoration) history.scrollRestoration = 'manual'; } catch (e) {}
+    try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    window.scrollTo(0, 0);
     this.N = 14;
     this.p = 0; this.phase = 'rest'; this.t0 = 0; this.p0 = 0; this.closeDur = 60;
     this.taps = []; this.count = 0; this.mode = 'demo';
